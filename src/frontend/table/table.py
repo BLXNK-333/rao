@@ -1,0 +1,295 @@
+from functools import partial
+from typing import List, Dict, Set
+
+import tkinter as tk
+import tkinter.messagebox as messagebox
+from tkinter import ttk
+import tkinter.font as tkFont
+
+from ..widgets import UndoEntry
+from ...eventbus import Subscriber, EventBus, Event
+from ...enums import EventType, DispatcherType, IDENT
+
+
+class DataTable(ttk.Frame):
+    def __init__(
+            self,
+            parent,
+            ident: IDENT,
+            headers: List[str],
+            data: List[List[str]],
+            stretchable_column_indices: List[int],
+    ):
+        super().__init__(parent)
+
+        self._ident = ident
+        self._dt = None
+        self._headers: List[str] = headers
+        self._data: Dict[str, List[str]] = {row[0]: list(row) for row in data}
+        self._user_defined_widths: Dict[str, int] = {}
+        self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
+        # {1, 2, 4, 5, 6} для Songs
+
+        self.subscribe()
+
+    def subscribe(self):
+        subscriptions = [
+            (EventType.BACK.DB.SONGCARD_UPDATED, self._update_row),
+            (EventType.VIEW.TABLE.PANEL.DELETE_CARD, self._delete_selected_rows),
+            (EventType.VIEW.TABLE.PANEL.EDIT_CARD, self._open_selected_row),
+            (EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE, self._filter_table)
+        ]
+        for event_type, handler in subscriptions:
+            EventBus.subscribe(
+                event_type=event_type,
+                subscriber=Subscriber(
+                    callback=handler,
+                    route_by=DispatcherType.TK,
+                    ident=self._ident
+                )
+            )
+
+    def create_widget(self):
+        self._setup_layout()
+        self._create_table()
+        self._setup_styles()
+        self._reset_table()
+        self.bind("<Configure>", self._resize_columns)
+
+    def _setup_layout(self):
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid(row=1, column=0, sticky="nsew")
+
+    def _create_table(self):
+        self.dt = ttk.Treeview(self, show="headings")
+        self.dt.grid(row=0, column=0, sticky="nsew")
+
+        self.scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.dt.yview)
+        self.dt.configure(yscrollcommand=self.scroll_y.set)
+        self.scroll_y.grid(row=0, column=1, sticky="ns")
+
+        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.dt.xview)
+        self.dt.configure(xscrollcommand=scroll_x.set)
+        scroll_x.grid(row=1, column=0, sticky="ew")
+
+        self.dt.bind("<Return>", self._open_selected_row)
+        self.dt.bind("<Double-1>", self._open_selected_row)
+
+    def _setup_styles(self):
+        self.dt.tag_configure("oddrow", background="#f5f5f5")
+        self.dt.tag_configure("evenrow", background="white")
+
+    def _reset_table(self):
+        self.dt.config(columns=self._headers)
+        for col in self._headers:
+            self.dt.heading(col, text=col)
+            self.dt.column(col, anchor="w", width=100, stretch=False)
+        self._fill_table(list(self._data.values()))
+        self._adjust_column_widths()
+
+    def _adjust_column_widths(self, sample_size: int = 20):
+        """Подгоняет ширину колонок по содержимому первых sample_size строк."""
+        font = tkFont.Font()
+        self._user_defined_widths = {}
+
+        for col in self._headers:
+            max_width = font.measure(col) + 20
+            for iid in list(self.dt.get_children())[-sample_size:]:
+                value = self.dt.set(iid, col)
+                max_width = max(max_width, font.measure(value) + 10)
+            self.dt.column(col, width=max_width, stretch=False)
+            self._user_defined_widths[col] = max_width
+
+    def _resize_columns(self, event=None):
+        if not self._headers or not self._user_defined_widths:
+            return
+
+        total_width = self.winfo_width() - self.scroll_y.winfo_width()
+        current_total = sum(
+            self._user_defined_widths.get(col, 100) for col in self._headers)
+
+        stretchables = [
+            col for i, col in enumerate(self._headers) if
+            i in self._stretchable_column_indices
+        ]
+
+        # 💡 Только если есть лишнее место, распределяем его
+        if total_width <= current_total or not stretchables:
+            for col in self._headers:
+                self.dt.column(col, width=self._user_defined_widths[col], stretch=False)
+            return
+
+        # 💡 Распределяем излишек только если он есть
+        extra = total_width - current_total
+        per_column_extra = extra // len(stretchables)
+
+        for i, col in enumerate(self._headers):
+            base_width = self._user_defined_widths.get(col, 100)
+            if i in self._stretchable_column_indices:
+                self.dt.column(col, width=base_width + per_column_extra, stretch=True)
+            else:
+                self.dt.column(col, width=base_width, stretch=False)
+
+    def _update_row(self, row: List[str]):
+        card_id = row[0]
+        self._data[card_id] = row
+        if self.dt.exists(card_id):
+            self.dt.item(card_id, values=row)
+        else:
+            self._insert_row(row)
+
+    def _fill_table(self, data: List[List[str]]):
+        self.dt.delete(*self.dt.get_children())
+        for index, row in enumerate(data):
+            self._insert_row(row, index)
+
+    def _insert_row(self, row: List[str], index: int = None):
+        card_id = row[0]
+        tag = self._get_tag(index)
+        self.dt.insert("", "end", iid=card_id, values=row, tags=(tag,))
+
+    def _get_tag(self, index: int | None) -> str:
+        if index is None:
+            index = len(self._data)
+        return "evenrow" if index % 2 == 0 else "oddrow"
+
+    def _recolor_rows(self):
+        for index, iid in enumerate(self.dt.get_children()):
+            tag = self._get_tag(index)
+            self.dt.item(iid, tags=(tag,))
+
+    def _open_selected_row(self, event=None):
+        if event is not None:
+            region = self.dt.identify_region(event.x, event.y)
+            if region != "cell":
+                return
+
+        selected = self.dt.selection()
+        if selected:
+            card_id = selected[0]
+
+            EventBus.publish(
+                Event(event_type=EventType.VIEW.TABLE.DT.EDIT_CARD),
+                card_id
+            )
+
+    def _delete_selected_rows(self):
+        selected_items = self.dt.selection()
+        if not selected_items:
+            return
+
+        if not tk.messagebox.askyesno("Confirmation", "Operation requires confirmation."):
+            return
+
+        deleted_ids = []
+        for card_id in selected_items:
+            self._data.pop(card_id, None)
+            self.dt.delete(card_id)
+            deleted_ids.append(card_id)
+
+        self._recolor_rows()
+
+        EventBus.publish(
+            Event(
+                event_type=EventType.VIEW.TABLE.DT.DELETE_CARDS,
+                ident=self._ident
+            ),
+            deleted_ids
+        )
+
+    def _filter_table(self, filtered: List[List[str]]):
+        self._fill_table(filtered)
+        self._recolor_rows()
+
+
+class TablePanel(ttk.Frame):
+    def __init__(self, parent: ttk.Frame, ident: IDENT):
+        super().__init__(parent)
+
+        self._ident = ident
+        self.search_var = tk.StringVar()
+        search_entry = UndoEntry(self, textvariable=self.search_var)
+        search_entry.pack(fill="x", padx=5, pady=5)
+        self.search_var.trace_add("write", self._on_search)
+
+        self.grid(row=0, column=0, sticky="ew")
+
+        # Инициализация буфера с данными
+        self._debounce_id = None
+
+    def _on_search(self, *args):
+        term = self.search_var.get().lower()
+
+        # Дебаунс: отменяем предыдущий таймер
+        if self._debounce_id:
+            self.after_cancel(self._debounce_id)
+
+        # Запуск нового таймера
+        self._debounce_id = self.after(200, partial(self.on_search, term))
+
+    def on_search(self, term: str):
+        EventBus.publish(
+            Event(
+                event_type=EventType.VIEW.TABLE.PANEL.SEARCH_VALUE,
+                ident=self._ident
+            ),
+            term
+        )
+
+
+class TableBuffer:
+    def __init__(self, ident: IDENT, max_history: int = 10):
+        # TODO: Тут надо понять как будут появляться данные и как и кто ими
+        #  будет управлять
+        self._ident = ident
+        self.original_data = None
+        self.filtered_data = None
+        self.max_history = max_history
+        self.history = []  # Список: (term, result)
+
+        self.subscribe()
+
+    def subscribe(self):
+        EventBus.subscribe(
+            event_type=EventType.VIEW.TABLE.PANEL.SEARCH_VALUE,
+            subscriber=Subscriber(
+                callback=self.filter_data,
+                route_by=DispatcherType.SONG_TABLE,
+                ident=self._ident
+            )
+        )
+
+    def filter_data(self, term: str):
+        term = term.strip().lower()
+        # print(term, [i[0] for i in self.history])
+
+        # Поиск подходящего буфера из истории
+        if not term:
+            self.filtered_data = self.original_data
+            self.history.clear()
+        else:
+            base_data = self.original_data
+            for prev_term, prev_result in reversed(self.history):
+                if term.startswith(prev_term):
+                    base_data = prev_result
+                    break
+
+            self.filtered_data = [
+                row for row in base_data
+                if any(term in cell.lower() for cell in row)
+            ]
+
+        # Публикуем результат фильтрации
+        EventBus.publish(
+            Event(
+                event_type=EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE,
+                ident=self._ident
+            ),
+            self.filtered_data,
+        )
+
+        # Обновляем историю
+        self.history.append((term, self.filtered_data))
+        if len(self.history) > self.max_history:
+            self.history.pop(0)
