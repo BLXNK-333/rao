@@ -2,9 +2,9 @@ from enum import StrEnum
 
 
 class ICON(StrEnum):
-    ADD_CARD_16 = "add_card_16"
-    EDIT_CARD_16 = "edit_card_16"
-    TRASH_16 = "trash_16"
+    ADD_CARD_24 = "add_card_24"
+    EDIT_CARD_24 = "edit_card_24"
+    DELETE_CARD_24 = "delete_card_24"
 
     SONGS_LIST_24 = "songs_list_24"
     REPORT_LIST_24 = "report_list_24"
@@ -50,8 +50,8 @@ class DispatcherType(StrEnum):
 
 
 class IDENT(StrEnum):
-    SONG_TABLE = "SONG_TABLE"
-    REPORT_TABLE = "REPORT_TABLE"
+    SONG_TABLE = "songs"
+    REPORT_TABLE = "report"
 
 
 class EventType:

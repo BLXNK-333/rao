@@ -8,9 +8,9 @@ class Icons:
     # 3D3D3D - dark bg
 
     _file_map = {
-        ICON.ADD_CARD_16: "add-document-16.png",
-        ICON.EDIT_CARD_16: "file-edit-16.png",
-        ICON.TRASH_16: "trash-16.png",
+        ICON.ADD_CARD_24: "plus-24.png",
+        ICON.EDIT_CARD_24: "pencil-24.png",
+        ICON.DELETE_CARD_24: "delete-24.png",
 
         ICON.SONGS_LIST_24: "list-music-24.png",
         ICON.REPORT_LIST_24: "checklist-task-budget-24.png",

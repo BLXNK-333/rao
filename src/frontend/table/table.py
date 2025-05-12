@@ -8,7 +8,8 @@ import tkinter.font as tkFont
 
 from ..widgets import UndoEntry
 from ...eventbus import Subscriber, EventBus, Event
-from ...enums import EventType, DispatcherType, IDENT
+from ...enums import EventType, DispatcherType, IDENT, ICON
+from ..icons.icon_map import Icons
 
 
 class DataTable(ttk.Frame):
@@ -29,6 +30,7 @@ class DataTable(ttk.Frame):
         self._user_defined_widths: Dict[str, int] = {}
         self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
         # {1, 2, 4, 5, 6} для Songs
+        self._table_len = 0
 
         self.subscribe()
 
@@ -206,27 +208,67 @@ class DataTable(ttk.Frame):
 class TablePanel(ttk.Frame):
     def __init__(self, parent: ttk.Frame, ident: IDENT):
         super().__init__(parent)
-
         self._ident = ident
         self.search_var = tk.StringVar()
-        search_entry = UndoEntry(self, textvariable=self.search_var)
-        search_entry.pack(fill="x", padx=5, pady=5)
+        self._debounce_id = None
+        self.buttons = {}
+        self.icons = Icons()
+
+        # Основной контейнер строки поиска и кнопок
+        self.container = ttk.Frame(self)
+        self.container.pack(fill="x", padx=5, pady=5)
+
+        self._create_buttons()
+        self._create_entry()
+        self._create_add_to_report_button()
         self.search_var.trace_add("write", self._on_search)
 
         self.grid(row=0, column=0, sticky="ew")
 
-        # Инициализация буфера с данными
-        self._debounce_id = None
+    def _create_entry(self):
+        search_entry = UndoEntry(self.container, textvariable=self.search_var)
+        search_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
+
+    def _create_buttons(self):
+        """Создаёт кнопки справа от поля поиска"""
+        container = ttk.Frame(self.container)
+        container.pack(side="left")
+
+        icons = [
+            (ICON.ADD_CARD_24, self._fake),
+            (ICON.EDIT_CARD_24, self._fake),
+            (ICON.DELETE_CARD_24, self._fake),
+        ]
+
+        for icon, command in icons:
+            btn = tk.Button(container, image=self.icons[icon], command=command,
+                            relief="flat", activebackground="#d0d0ff")
+            btn.pack(side="left", padx=2)
+            self.buttons[icon] = btn
+
+    def _create_add_to_report_button(self):
+        # Кнопка "В отчёт"
+        btn_report = tk.Button(
+            self.container,
+            text="Add",
+            bg="#4CAF50",  # зелёный фон
+            fg="white",  # белый текст
+            activebackground="#45a049",  # фон при наведении
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            command=self._fake,
+            padx=12, pady=3,
+        )
+        btn_report.pack(side="right", padx=5)
+
+    def _fake(self):
+        pass
 
     def _on_search(self, *args):
         term = self.search_var.get().lower()
-
-        # Дебаунс: отменяем предыдущий таймер
         if self._debounce_id:
             self.after_cancel(self._debounce_id)
-
-        # Запуск нового таймера
-        self._debounce_id = self.after(200, partial(self.on_search, term))
+        self._debounce_id = self.after(300, partial(self.on_search, term))
 
     def on_search(self, term: str):
         EventBus.publish(
