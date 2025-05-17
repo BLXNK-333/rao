@@ -8,17 +8,21 @@ from abc import ABC, abstractmethod
 
 from tkinter import Tk
 
-from .enums import EventType, DispatcherType, IDENT
+from .enums import EventType, DispatcherType, GROUP
 
 
 class Event:
     def __init__(
             self,
             event_type: Union[str | EventType],
-            ident: Optional[IDENT] = None
+            group: Optional[GROUP] = None,
+            sender_id: Optional[str] = None,
+            recipient_id: Optional[str] = None
     ):
         self.event_type = event_type
-        self.ident = ident
+        self.group = group
+        self.sender_id = sender_id
+        self.recipient_id = recipient_id
 
 
 # Dispatcher interface
@@ -88,11 +92,11 @@ class Subscriber:
             self,
             callback: Callable,
             route_by: DispatcherType,
-            ident: Optional[IDENT] = None
+            group: Optional[GROUP] = None
     ):
         self.callback = callback
         self.route_by = route_by
-        self.ident = ident
+        self.group = group
 
 
 class EventBus:
@@ -173,7 +177,7 @@ class EventBus:
             for subscriber in cls._subscribers.get(event.event_type, []):
                 # Если публикующий указал ident, то событие будет
                 # опубликовано только для подписчиков с таким же ident.
-                if event.ident is not None and event.ident != subscriber.ident:
+                if event.group is not None and event.group != subscriber.group:
                     continue
 
                 dispatcher = cls._dispatchers.get(subscriber.route_by)

@@ -2,7 +2,7 @@ from tkinter import ttk
 
 from .table.card import CardManager
 from .table.table import DataTable, TablePanel, TableBuffer
-from ..enums import IDENT
+from ..enums import GROUP
 
 
 
@@ -15,15 +15,9 @@ class Table(ttk.Frame):
         super().__init__(parent)
         self._setup_layout()
 
-        self.table_panel = TablePanel(parent=self, ident=IDENT.SONG_TABLE)
-        self.data_table = DataTable(
-            parent=self,
-            ident=IDENT.SONG_TABLE,
-            headers=[],
-            data=[],
-            stretchable_column_indices=[1, 2, 4, 5, 6]
-        )
-        self.buffer = TableBuffer(ident=IDENT.SONG_TABLE)
+        self.table_panel = TablePanel(parent=self, group=GROUP.SONG_TABLE)
+        self.data_table = DataTable(parent=self, group=GROUP.SONG_TABLE)
+        self.buffer = TableBuffer(group=GROUP.SONG_TABLE)
 
         # Этот здесь временно
         self.card_manager = CardManager(parent)

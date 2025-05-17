@@ -18,22 +18,23 @@ if __name__ == '__main__':
     view.terminal.term_logger.set_msq_queue(queue)
 
     # Тут палка в жопу, но временная, просто пока торчит
-    view.songs.data_table._headers = SONG_HEADERS
-    view.songs.data_table._data = {row[0]: list(row) for row in SONGS_LIST}
-
-    view.songs.buffer.original_data = SONGS_LIST
-    view.songs.buffer.filtered_data = SONGS_LIST
+    SONGS_DICT = {row[0]: list(row) for row in SONGS_LIST}
+    view.songs.buffer.original_data = SONGS_DICT
 
     view.terminal.term_panel.create_widget()
     view.terminal.term_logger.create_widget()
-    view.songs.data_table.create_widget()
+    view.songs.data_table.create_table(
+        headers=SONG_HEADERS,
+        data=SONGS_DICT.values(),
+        stretchable_column_indices=[1, 2, 4, 5, 6]
+    )
 
     tk_dispatcher = TkDispatcher(tk=view)
-    song_table_buffer_dispatcher = QueueDispatcher()
+    table_dispatcher = QueueDispatcher()
     common_dispatcher = QueueDispatcher()
 
     EventBus.register_dispatcher(DispatcherType.TK, tk_dispatcher)
-    EventBus.register_dispatcher(DispatcherType.SONG_TABLE, song_table_buffer_dispatcher)
+    EventBus.register_dispatcher(DispatcherType.SONG_TABLE, table_dispatcher)
     EventBus.register_dispatcher(DispatcherType.COMMON, common_dispatcher)
 
     EventBus.start()

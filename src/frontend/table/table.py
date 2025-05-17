@@ -1,5 +1,6 @@
 from functools import partial
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Union
+from collections.abc import ValuesView
 
 import tkinter as tk
 import tkinter.messagebox as messagebox
@@ -8,35 +9,26 @@ import tkinter.font as tkFont
 
 from ..widgets import UndoEntry
 from ...eventbus import Subscriber, EventBus, Event
-from ...enums import EventType, DispatcherType, IDENT, ICON
+from ...enums import EventType, DispatcherType, GROUP, ICON
 from ..icons.icon_map import Icons
 
 
 class DataTable(ttk.Frame):
-    def __init__(
-            self,
-            parent,
-            ident: IDENT,
-            headers: List[str],
-            data: List[List[str]],
-            stretchable_column_indices: List[int],
-    ):
+    def __init__(self, parent, group: GROUP):
         super().__init__(parent)
 
-        self._ident = ident
+        self._group = group
         self._dt = None
-        self._headers: List[str] = headers
-        self._data: Dict[str, List[str]] = {row[0]: list(row) for row in data}
+        self._headers: List[str] = []
         self._user_defined_widths: Dict[str, int] = {}
-        self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
-        # {1, 2, 4, 5, 6} для Songs
+        self._stretchable_column_indices: Set[int] = set()
         self._table_len = 0
 
         self.subscribe()
 
     def subscribe(self):
         subscriptions = [
-            (EventType.BACK.DB.SONGCARD_UPDATED, self._update_row),
+            (EventType.VIEW.TABLE.BUFFER.CARD_UPDATED, self._update_row),
             (EventType.VIEW.TABLE.PANEL.DELETE_CARD, self._delete_selected_rows),
             (EventType.VIEW.TABLE.PANEL.EDIT_CARD, self._open_selected_row),
             (EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE, self._filter_table)
@@ -47,15 +39,26 @@ class DataTable(ttk.Frame):
                 subscriber=Subscriber(
                     callback=handler,
                     route_by=DispatcherType.TK,
-                    ident=self._ident
+                    group=self._group
                 )
             )
 
-    def create_widget(self):
+    def create_table(
+            self,
+            headers: List[str],
+            data: ValuesView[List[str]],
+            stretchable_column_indices: List[int]
+    ):
+        self._headers = headers
+        self._stretchable_column_indices = set(stretchable_column_indices)
+        self._table_len = len(data)
+
         self._setup_layout()
-        self._create_table()
+        self._create_dt()
         self._setup_styles()
-        self._reset_table()
+        self._render_headers()
+        self._fill_table(data)
+        self._adjust_column_widths()
         self.bind("<Configure>", self._resize_columns)
 
     def _setup_layout(self):
@@ -63,7 +66,7 @@ class DataTable(ttk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid(row=1, column=0, sticky="nsew")
 
-    def _create_table(self):
+    def _create_dt(self):
         self.dt = ttk.Treeview(self, show="headings")
         self.dt.grid(row=0, column=0, sticky="nsew")
 
@@ -82,13 +85,11 @@ class DataTable(ttk.Frame):
         self.dt.tag_configure("oddrow", background="#f5f5f5")
         self.dt.tag_configure("evenrow", background="white")
 
-    def _reset_table(self):
+    def _render_headers(self):
         self.dt.config(columns=self._headers)
         for col in self._headers:
             self.dt.heading(col, text=col)
             self.dt.column(col, anchor="w", width=100, stretch=False)
-        self._fill_table(list(self._data.values()))
-        self._adjust_column_widths()
 
     def _adjust_column_widths(self, sample_size: int = 20):
         """Подгоняет ширину колонок по содержимому первых sample_size строк."""
@@ -135,14 +136,16 @@ class DataTable(ttk.Frame):
 
     def _update_row(self, row: List[str]):
         card_id = row[0]
-        self._data[card_id] = row
+        # self._data[card_id] = row
         if self.dt.exists(card_id):
             self.dt.item(card_id, values=row)
         else:
             self._insert_row(row)
+            self._table_len += 1
 
-    def _fill_table(self, data: List[List[str]]):
+    def _fill_table(self, data: Union[List[List[str]], ValuesView[List[str]]]):
         self.dt.delete(*self.dt.get_children())
+        self._table_len = len(data)
         for index, row in enumerate(data):
             self._insert_row(row, index)
 
@@ -153,7 +156,7 @@ class DataTable(ttk.Frame):
 
     def _get_tag(self, index: int | None) -> str:
         if index is None:
-            index = len(self._data)
+            index = self._table_len
         return "evenrow" if index % 2 == 0 else "oddrow"
 
     def _recolor_rows(self):
@@ -186,29 +189,31 @@ class DataTable(ttk.Frame):
 
         deleted_ids = []
         for card_id in selected_items:
-            self._data.pop(card_id, None)
+
             self.dt.delete(card_id)
             deleted_ids.append(card_id)
 
+        self._table_len -= len(deleted_ids)
         self._recolor_rows()
 
         EventBus.publish(
             Event(
                 event_type=EventType.VIEW.TABLE.DT.DELETE_CARDS,
-                ident=self._ident
+                group=self._group
             ),
-            deleted_ids
+            deleted_ids, self._group
         )
 
-    def _filter_table(self, filtered: List[List[str]]):
+    def _filter_table(
+            self, filtered: Union[List[List[str]], ValuesView[List[str]]]) -> None:
         self._fill_table(filtered)
         self._recolor_rows()
 
 
 class TablePanel(ttk.Frame):
-    def __init__(self, parent: ttk.Frame, ident: IDENT):
+    def __init__(self, parent: ttk.Frame, group: GROUP):
         super().__init__(parent)
-        self._ident = ident
+        self._group = group
         self.search_var = tk.StringVar()
         self._debounce_id = None
         self.buttons = {}
@@ -235,9 +240,9 @@ class TablePanel(ttk.Frame):
         container.pack(side="left")
 
         icons = [
-            (ICON.ADD_CARD_24, self._fake),
-            (ICON.EDIT_CARD_24, self._fake),
-            (ICON.DELETE_CARD_24, self._fake),
+            (ICON.ADD_CARD_24, self.add_card),
+            (ICON.EDIT_CARD_24, self.edit_card),
+            (ICON.DELETE_CARD_24, self.delete_card),
         ]
 
         for icon, command in icons:
@@ -256,12 +261,33 @@ class TablePanel(ttk.Frame):
             activebackground="#45a049",  # фон при наведении
             font=("Segoe UI", 10, "bold"),
             relief="flat",
-            command=self._fake,
+            command=self.add_to_report,
             padx=12, pady=3,
         )
         btn_report.pack(side="right", padx=5)
 
-    def _fake(self):
+    def add_card(self):
+        EventBus.publish(
+            event=Event(
+                event_type=EventType.VIEW.TABLE.PANEL.ADD_CARD,
+                group=self._group)
+        )
+
+    def edit_card(self):
+        EventBus.publish(
+            event=Event(
+                event_type=EventType.VIEW.TABLE.PANEL.EDIT_CARD,
+                group=self._group)
+        )
+
+    def delete_card(self):
+        EventBus.publish(
+            event=Event(
+                event_type=EventType.VIEW.TABLE.PANEL.DELETE_CARD,
+                group=self._group)
+        )
+
+    def add_to_report(self):
         pass
 
     def _on_search(self, *args):
@@ -274,50 +300,55 @@ class TablePanel(ttk.Frame):
         EventBus.publish(
             Event(
                 event_type=EventType.VIEW.TABLE.PANEL.SEARCH_VALUE,
-                ident=self._ident
+                group=self._group
             ),
             term
         )
 
 
 class TableBuffer:
-    def __init__(self, ident: IDENT, max_history: int = 10):
-        # TODO: Тут надо понять как будут появляться данные и как и кто ими
-        #  будет управлять
-        self._ident = ident
-        self.original_data = None
-        self.filtered_data = None
+    # TODO: Написать модуль card, и подключить базу данных, чтобы можно было
+    #  протестировать логику, добавить логи.
+
+    def __init__(self, group: GROUP, max_history: int = 10):
+        self._group = group
+        self.original_data: Dict[str, List[str]] = {}
         self.max_history = max_history
         self.history = []  # Список: (term, result)
 
         self.subscribe()
 
     def subscribe(self):
-        EventBus.subscribe(
-            event_type=EventType.VIEW.TABLE.PANEL.SEARCH_VALUE,
-            subscriber=Subscriber(
-                callback=self.filter_data,
-                route_by=DispatcherType.SONG_TABLE,
-                ident=self._ident
+        subscribes = [
+            (EventType.VIEW.TABLE.PANEL.SEARCH_VALUE, self.filter_data),
+            (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.delete_items),
+            (EventType.BACK.DB.CARD_UPDATED, self.update_item)
+        ]
+
+        for event, handler in subscribes:
+            EventBus.subscribe(
+                event_type=event,
+                subscriber=Subscriber(
+                    callback=handler,
+                    route_by=DispatcherType.SONG_TABLE,
+                    group=self._group
+                )
             )
-        )
 
     def filter_data(self, term: str):
         term = term.strip().lower()
-        # print(term, [i[0] for i in self.history])
 
         # Поиск подходящего буфера из истории
         if not term:
-            self.filtered_data = self.original_data
-            self.history.clear()
+            filtered_data = self.original_data.values()
         else:
-            base_data = self.original_data
+            base_data = self.original_data.values()
             for prev_term, prev_result in reversed(self.history):
                 if term.startswith(prev_term):
                     base_data = prev_result
                     break
 
-            self.filtered_data = [
+            filtered_data = [
                 row for row in base_data
                 if any(term in cell.lower() for cell in row)
             ]
@@ -326,12 +357,26 @@ class TableBuffer:
         EventBus.publish(
             Event(
                 event_type=EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE,
-                ident=self._ident
+                group=self._group
             ),
-            self.filtered_data,
+            filtered_data,
         )
 
         # Обновляем историю
-        self.history.append((term, self.filtered_data))
+        self.history.append((term, filtered_data))
         if len(self.history) > self.max_history:
             self.history.pop(0)
+
+    def sort_data(self, column_idx: int, direction: int):
+        pass
+
+    def update_item(self, row: List[str]):
+        card_id = row[0]
+        self.original_data[card_id] = row
+        # Тут буфер должен опубликовать для таблицы что-то, но будет зависеть от
+        # логики которая будет написана позже, пока не ясно
+
+    def delete_items(self, deleted_ids: List[str], _ident: str):
+        for item_id in deleted_ids:
+            self.original_data.pop(item_id)
+        self.history.clear()

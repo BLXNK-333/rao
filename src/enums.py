@@ -49,7 +49,7 @@ class DispatcherType(StrEnum):
     COMMON = "COMMON"
 
 
-class IDENT(StrEnum):
+class GROUP(StrEnum):
     SONG_TABLE = "songs"
     REPORT_TABLE = "report"
 
@@ -68,8 +68,8 @@ class EventType:
             # События связанные с рассылкой данных.
             SETTINGS = "BACK.DB.SETTINGS"
             DEFAULT_SETTINGS = "BACK.DB.DEFAULT_SETTINGS"
-            SONGTABLE = "BACK.DB.SONGTABLE"
-            SONGCARD_UPDATED = "BACK.DB.SONGCARD_UPDATED"
+            TABLE = "BACK.DB.TABLE"
+            CARD_UPDATED = "BACK.DB.CARD_UPDATED"
 
 
     class VIEW:
@@ -95,6 +95,7 @@ class EventType:
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"
+                CARD_UPDATED = "VIEW.TABLE.CARD_UPDATED"
 
             class CARD:
                 SAVE = "VIEW.TABLE.SAVE_CARD"
