@@ -1,0 +1,198 @@
+from typing import List, Dict, Any, Optional, Tuple, Type
+import logging
+from pathlib import Path
+import traceback
+
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
+
+from .models import Base, State, Songs, Report
+from .base import DB_PATH, Engine, SessionFactory
+
+
+class Database:
+    model_map: Dict[str, Type[Base]] = {
+        "songs": Songs,
+        "report": Report,
+    }
+
+    def __init__(self) -> None:
+        """
+        Управляющий класс базы данных синхронизации (ORM).
+        """
+        self._logger = logging.getLogger(__name__)
+        self.db_path: Path = DB_PATH
+        self.engine = Engine
+        self.session: Session = SessionFactory()
+        self._initialization()
+
+    def _initialization(self):
+        try:
+            Base.metadata.create_all(self.engine)
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error during initialization: {e}")
+            self._logger.debug(traceback.format_exc())
+            self.close()
+
+    def get_all_rows(self, table_name: str) -> List[Dict[str, str]]:
+        """
+        Возвращает все строки из таблицы как список словарей:
+        [{field_name: value, ...}, ...]
+        """
+        model = self.model_map.get(table_name.lower())
+        if not model:
+            self._logger.error(f"Invalid table name: {table_name}")
+            return []
+
+        try:
+            records = self.session.query(model).all()
+            rows = []
+            for record in records:
+                row_dict = {}
+                for col in model.__table__.columns:
+                    value = getattr(record, col.name)
+                    row_dict[col.name] = str(value) if value is not None else ""
+                rows.append(row_dict)
+            return rows
+        except SQLAlchemyError as e:
+            self._logger.error(f"Database error in get_all_rows('{table_name}'): {e}")
+            self._logger.debug(traceback.format_exc())
+            return []
+
+    def get_month_report(self):
+        pass
+
+    def get_quarter_report(self):
+        pass
+
+    def get_card(self, table_name: str, card_id: str) -> Optional[Dict[str, str]]:
+        """
+        Получает одну запись по ID из указанной таблицы ('songs' или 'report')
+        и возвращает как словарь: {field_name: value, ...}.
+
+        :param table_name: имя таблицы ('songs' или 'report')
+        :param card_id: строковое значение ID записи
+        :return: словарь значений полей или None, если запись не найдена
+        """
+        model = self.model_map.get(table_name.lower())
+        if not model:
+            self._logger.error(f"Invalid table name in get_card: {table_name}")
+            return None
+
+        try:
+            record = self.session.get(model, card_id)
+            if not record:
+                self._logger.warning(
+                    f"Record with ID {card_id} not found in {table_name}")
+                return None
+
+            return {
+                col.name: str(getattr(record, col.name))
+                if getattr(record, col.name) is not None else ""
+                for col in model.__table__.columns
+            }
+
+        except SQLAlchemyError as e:
+            self._logger.error(
+                f"Database error in get_card('{table_name}', '{card_id}'): {e}")
+            self._logger.debug(traceback.format_exc())
+            return None
+
+    def add_card(self, table_name: str, payload: dict) -> Optional[str]:
+        """
+        Добавляет новую запись в указанную таблицу (songs или report).
+
+        :param table_name: Название таблицы ('songs' или 'report').
+        :param payload: Словарь с данными.
+        """
+
+        model_cls = self.model_map.get(table_name.lower())
+        if not model_cls:
+            self._logger.error(f"add_card: неизвестная таблица '{table_name}'")
+            return None
+
+        try:
+            # Удаляем 'ID', 'id' и пустые строки
+            payload.pop("ID", None)
+            payload.pop("id", None)
+
+            new_instance = model_cls(**payload)
+            self.session.add(new_instance)
+            self.session.commit()
+
+            card_id = str(new_instance.id)
+            # если нужно — можно отправить card_id через EventBus, как в flashcard-логике
+            self._logger.debug(f"{model_cls.__name__} (ID: {card_id}) "
+                               f"добавлена в таблицу '{table_name}'")
+            return card_id
+
+        except Exception as e:
+            self._logger.error(f"Ошибка при добавлении записи в таблицу '{table_name}': {e}")
+            self._logger.debug(traceback.format_exc())
+            self.session.rollback()
+            return None
+
+    def update_card(self, card_id: str, table_name: str, payload: dict) -> None:
+        """
+        Обновляет запись в указанной таблице по ID.
+
+        :param card_id: ID записи.
+        :param table_name: Название таблицы ('songs' или 'report').
+        :param payload: Обновлённые данные.
+        """
+
+        model_cls = self.model_map.get(table_name.lower())
+        if not model_cls:
+            self._logger.error(f"update_card: неизвестная таблица '{table_name}'")
+            return
+
+        try:
+            record = self.session.get(model_cls, int(card_id))
+            if not record:
+                self._logger.warning(f"{model_cls.__name__} с ID {card_id} не найдена.")
+                return
+
+            for key, value in payload.items():
+                if hasattr(record, key):
+                    setattr(record, key, value)
+
+            self.session.commit()
+            self._logger.debug(f"{model_cls.__name__} (ID: {card_id}) обновлена в таблице '{table_name}'")
+
+        except Exception as e:
+            self._logger.error(f"Ошибка при обновлении записи ID={card_id} в таблице '{table_name}': {e}")
+            self._logger.debug(traceback.format_exc())
+            self.session.rollback()
+
+    def delete_card(self, deleted_ids: List[str], table_name: str) -> None:
+        """
+        Deletes cards from the specified table by their IDs.
+
+        :param deleted_ids: List of string IDs to delete.
+        :param table_name: Name of the table ('songs' or 'report').
+        """
+        model_cls = self.model_map.get(table_name.lower())
+        if not model_cls:
+            self._logger.error(f"delete_card: неизвестная таблица '{table_name}'")
+            return
+
+        try:
+            count = (
+                self.session.query(model_cls)
+                .filter(model_cls.id.in_(map(int, deleted_ids)))
+                .delete(synchronize_session=False)
+            )
+            self.session.commit()
+            self._logger.debug(
+                f"Удалено {count} карточек из таблицы '{table_name}' с ID: {deleted_ids}")
+
+        except Exception as e:
+            self._logger.error(f"Ошибка при удалении карточек из таблицы '{table_name}': {e}")
+            self._logger.debug(traceback.format_exc())
+            self.session.rollback()
+
+    def close(self):
+        """
+        Закрывает соединение.
+        """
+        self.session.close()

@@ -1,0 +1,101 @@
+from ...enums import HEADER
+
+
+HEADERS = {
+    HEADER.SONGS: [
+        "ID",
+        "Исполнитель",
+        "Название",
+        "Время",
+        "Композитор",
+        "Автора текста",
+        "Лэйбл"
+    ],
+    HEADER.REPORT: [
+        "ID",
+        "Дата",
+        "Время",
+        "Исполнитель",
+        "Название",
+        "Длительность звучания",
+        "Общий хронометраж",
+        "Композитор",
+        "Автор текста",
+        "Передача",
+        "Количество исполнений",
+        "Жанр",
+        "Лэйбл"
+    ]
+}
+
+
+FIELD_MAPS = {
+    HEADER.SONGS: {
+        "ID": "id",
+        "Исполнитель": "artist",
+        "Название": "title",
+        "Время": "duration",
+        "Композитор": "composer",
+        "Автора текста": "lyricist",
+        "Лэйбл": "label"
+    },
+    HEADER.REPORT: {
+        "ID": "id",
+        "Дата": "date",
+        "Время": "time",
+        "Исполнитель": "artist",
+        "Название": "title",
+        "Длительность звучания": "play_duration",
+        "Общий хронометраж": "total_duration",
+        "Композитор": "composer",
+        "Автор текста": "lyricist",
+        "Передача": "program_name",
+        "Количество исполнений": "play_count",
+        "Жанр": "genre",
+        "Лэйбл": "label"
+    }
+}
+
+
+def get_headers(header: HEADER):
+    return HEADERS.get(header)
+
+
+def map_ui_to_model_fields(data: dict, table_name: str) -> dict:
+    """
+    Преобразует пользовательские ключи словаря `data` (например, из UI)
+    в имена полей ORM-модели.
+
+    :param data: входной словарь с ключами из UI
+    :param table_name: имя таблицы — 'songs' или 'report'
+    :return: dict с ключами, соответствующими полям модели
+    """
+    table_key = HEADER(table_name.lower())
+    field_map = FIELD_MAPS.get(table_key, {})
+    return {
+        field_map.get(key, key): value
+        for key, value in data.items()
+        if key in field_map
+    }
+
+
+def map_db_rows_to_view_order(table_name: str, rows: list[dict]) -> list[list[str]]:
+    """
+    Преобразует список строк из БД (каждая — dict с ключами как имена полей модели)
+    в список списков значений в порядке, определённом HEADERS (для UI).
+
+    :param table_name: имя таблицы 'songs' или 'report'
+    :param rows: список dict с данными из БД
+    :return: список списков значений в порядке отображения
+    """
+    table_key = HEADER(table_name.lower())
+    headers = get_headers(table_key)
+    field_map = FIELD_MAPS.get(table_key, {})
+    desired_fields = [field_map.get(h) for h in headers]
+
+    reordered_rows = []
+    for row_dict in rows:
+        new_row = [row_dict.get(field, "") for field in desired_fields]
+        reordered_rows.append(new_row)
+
+    return reordered_rows

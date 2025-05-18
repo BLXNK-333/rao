@@ -6,16 +6,17 @@ from ttkthemes import ThemedTk
 from .widgets import BaseWindow
 from .menu import TopMenu
 from .terminal import Terminal
-from .songs import Table
 from .report import Report
 from .export import Export
 from .settings import Settings
 from .style import UIStyles
 from .icons.icon_map import Icons, ICON
 from .bindings import apply_global_bindings
+from .table.table import Table
+from .table.card import CardManager
 
 from ..eventbus import EventBus, Subscriber, Event
-from ..enums import TERM, EventType, DispatcherType
+from ..enums import TERM, EventType, DispatcherType, GROUP
 
 
 class ViewUI(ThemedTk, BaseWindow):
@@ -23,11 +24,11 @@ class ViewUI(ThemedTk, BaseWindow):
         super().__init__()
         self.title("RAO")
         self.geometry("800x600")
+        self.protocol("WM_DELETE_WINDOW", self.close)
 
         UIStyles()
         apply_global_bindings(self)
         self.icons = Icons()
-        self.protocol("WM_DELETE_WINDOW", self.close)
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
@@ -40,10 +41,12 @@ class ViewUI(ThemedTk, BaseWindow):
         self.content.grid_columnconfigure(0, weight=1)
 
         # Основные фреймы (все фреймы в 1 строке сетки)
-        self.songs = Table(parent=self.content)
+        self.songs = Table(parent=self.content, group_id=GROUP.SONG_TABLE)
         self.report = Report(parent=self.content)
         self.export = Export(parent=self.content)
         self.settings = Settings(parent=self.content)
+
+        self.card_manager = CardManager(self.content)
 
         # Устанавливаем текущий фрейм
         self.current_frame = self.songs

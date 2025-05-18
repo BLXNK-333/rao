@@ -15,14 +15,10 @@ class Event:
     def __init__(
             self,
             event_type: Union[str | EventType],
-            group: Optional[GROUP] = None,
-            sender_id: Optional[str] = None,
-            recipient_id: Optional[str] = None
+            group_id: Optional[GROUP] = None,
     ):
         self.event_type = event_type
-        self.group = group
-        self.sender_id = sender_id
-        self.recipient_id = recipient_id
+        self.group_id = group_id
 
 
 # Dispatcher interface
@@ -92,11 +88,11 @@ class Subscriber:
             self,
             callback: Callable,
             route_by: DispatcherType,
-            group: Optional[GROUP] = None
+            group_id: Optional[GROUP] = None
     ):
         self.callback = callback
         self.route_by = route_by
-        self.group = group
+        self.group_id = group_id
 
 
 class EventBus:
@@ -175,9 +171,11 @@ class EventBus:
                 break
             event, args, kwargs = task
             for subscriber in cls._subscribers.get(event.event_type, []):
-                # Если публикующий указал ident, то событие будет
-                # опубликовано только для подписчиков с таким же ident.
-                if event.group is not None and event.group != subscriber.group:
+                # 💡 Событие доставляется только подписчикам, у которых
+                # `subscriber.group_id` совпадает с `event.group_id`.
+                # Если `event.group_id is None`, оно считается **общим** и доставляется
+                # только подписчикам без группы (`subscriber.group_id is None`).
+                if subscriber.group_id is not None and subscriber.group_id != event.group_id:
                     continue
 
                 dispatcher = cls._dispatchers.get(subscriber.route_by)

@@ -44,14 +44,18 @@ class TERM(StrEnum):
 class DispatcherType(StrEnum):
     TK = "TK"
     DB = "DB"
-    SONG_TABLE = "SONG_TABLE"
-    REPORT_TABLE = "REPORT_TABLE"
+    TABLE = "TABLE"
     COMMON = "COMMON"
 
 
 class GROUP(StrEnum):
     SONG_TABLE = "songs"
     REPORT_TABLE = "report"
+
+
+class HEADER(StrEnum):
+    SONGS = "songs"
+    REPORT = "report"
 
 
 class EventType:
@@ -66,10 +70,12 @@ class EventType:
 
         class DB:
             # События связанные с рассылкой данных.
-            SETTINGS = "BACK.DB.SETTINGS"
-            DEFAULT_SETTINGS = "BACK.DB.DEFAULT_SETTINGS"
+            # SETTINGS = "BACK.DB.SETTINGS"
+            # DEFAULT_SETTINGS = "BACK.DB.DEFAULT_SETTINGS"
             TABLE = "BACK.DB.TABLE"
-            CARD_UPDATED = "BACK.DB.CARD_UPDATED"
+            CARD_VALUES_LIST = "BACK.DB.CARD_VALUES_LIST"
+            CARD_ID = "BACK.DB.CARD_ID"
+            CARD_DICT = "BACK.DB.CARD_DICT"
 
 
     class VIEW:
@@ -92,14 +98,15 @@ class EventType:
             class DT:
                 EDIT_CARD = "VIEW.TABLE.DT.EDIT_CARD"
                 DELETE_CARDS = "VIEW.TABLE.DT.DELETE_CARDS"
+                SORT_CHANGED = "VIEW.TABLE.DT.SORT_CHANGED"
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"
-                CARD_UPDATED = "VIEW.TABLE.CARD_UPDATED"
+                CARD_VALUES_LIST = "VIEW.TABLE.CARD_VALUES_LIST"
 
-            class CARD:
-                SAVE = "VIEW.TABLE.SAVE_CARD"
-                DESTROY = "VIEW.TABLE.CLOSE_CARD"
+        class CARD:
+            SAVE = "VIEW.CARD.SAVE"
+            DESTROY = "VIEW.CARD.DESTROY"
 
         class SETTINGS:
             class CLICK:
