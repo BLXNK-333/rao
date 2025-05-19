@@ -73,7 +73,7 @@ class EventType:
             # SETTINGS = "BACK.DB.SETTINGS"
             # DEFAULT_SETTINGS = "BACK.DB.DEFAULT_SETTINGS"
             TABLE = "BACK.DB.TABLE"
-            CARD_VALUES_LIST = "BACK.DB.CARD_VALUES_LIST"
+            CARD_VALUES = "BACK.DB.CARD_VALUES"
             CARD_ID = "BACK.DB.CARD_ID"
             CARD_DICT = "BACK.DB.CARD_DICT"
 
@@ -102,7 +102,7 @@ class EventType:
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"
-                CARD_VALUES_LIST = "VIEW.TABLE.CARD_VALUES_LIST"
+                CARD_UPDATED = "VIEW.TABLE.CARD_UPDATED"
 
         class CARD:
             SAVE = "VIEW.CARD.SAVE"

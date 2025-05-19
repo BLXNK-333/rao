@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from typing import List, Dict, Set, Union, Tuple, Optional
 from collections.abc import ValuesView
@@ -32,7 +33,7 @@ class DataTable(ttk.Frame):
 
     def subscribe(self):
         subscriptions = [
-            (EventType.VIEW.TABLE.BUFFER.CARD_VALUES_LIST, self._update_row),
+            (EventType.VIEW.TABLE.BUFFER.CARD_UPDATED, self._highlight_row),
             (EventType.VIEW.TABLE.PANEL.DELETE_CARD, self._delete_selected_rows),
             (EventType.VIEW.TABLE.PANEL.EDIT_CARD, self._open_selected_row),
             (EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE, self._filter_table)
@@ -176,18 +177,13 @@ class DataTable(ttk.Frame):
             else:
                 self.dt.column(col, width=base_width, stretch=False)
 
-    def _update_row(self, row: List[str]):
+    def _highlight_row(self, row: List[str]):
         card_id = row[0]
         if self.dt.exists(card_id):
             self.dt.item(card_id, values=row)
-        else:
-            self._insert_row(row)
-            self._table_len += 1
-
-        # Прокрутка и выделение строки
-        self.dt.selection_set(card_id)
-        self.dt.focus(card_id)
-        self.dt.see(card_id)
+            self.dt.selection_set(card_id)
+            self.dt.focus(card_id)
+            self.dt.see(card_id)
 
     def _fill_table(self, data: Union[List[List[str]], ValuesView[List[str]]]):
         self.dt.delete(*self.dt.get_children())
@@ -352,84 +348,123 @@ class TablePanel(ttk.Frame):
 
 
 class TableBuffer:
+    # TODO: Протестировать логику этого классы, возможно стоит покрыть тестами
+    #  и писать через них, также возможно стоит оптимизировать логику.
+
     def __init__(self, group_id: GROUP, max_history: int = 10):
         self._group_id = group_id
         self.original_data: Dict[str, List[str]] = {}
+        self.sorted_keys: List[str] = []  # Отсортированные ключи
+
         self.max_history = max_history
-        self.history = []  # Список: (term, result)
-        self.current_sort = ...
+        self.history: List[Tuple[str, List[str]]] = []  # (term, list_of_keys)
+
+        self._logger = logging.getLogger(__name__)
+
+        # Текущие параметры сортировки и фильтрации
+        self.current_sort: Tuple[int, str, int] = (0, "", 0)  # (column_idx, column_name, direction)
+        self.current_filter_term: str = ""
 
         self.subscribe()
 
     def subscribe(self):
-        subscribes = [
+        for event, handler in [
             (EventType.VIEW.TABLE.PANEL.SEARCH_VALUE, self.filter_data),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.delete_items),
-            (EventType.BACK.DB.CARD_VALUES_LIST, self.update_item),
+            (EventType.BACK.DB.CARD_VALUES, self.update_item),
             (EventType.VIEW.TABLE.DT.SORT_CHANGED, self.sort_data),
-        ]
-
-        for event, handler in subscribes:
+        ]:
             EventBus.subscribe(
                 event_type=event,
                 subscriber=Subscriber(
                     callback=handler,
                     route_by=DispatcherType.TABLE,
-                    group_id=self._group_id
+                    group_id=self._group_id,
                 )
             )
 
     def filter_data(self, term: str):
         term = term.strip().lower()
+        self.current_filter_term = term  # сохраняем текущий фильтр
 
-        # Поиск подходящего буфера из истории
-        if not term:
-            filtered_data = self.original_data.values()
-        else:
-            base_data = self.original_data.values()
-            for prev_term, prev_result in reversed(self.history):
+        base_keys = self.sorted_keys.copy()
+
+        if term:
+            for prev_term, prev_keys in reversed(self.history):
                 if term.startswith(prev_term):
-                    base_data = prev_result
+                    base_keys = prev_keys
                     break
 
-            filtered_data = [
-                row for row in base_data
-                if any(term in cell.lower() for cell in row)
+            filtered_keys = [
+                key for key in base_keys
+                if any(term in cell.lower() for cell in self.original_data.get(key, []))
             ]
+        else:
+            filtered_keys = base_keys
 
-        # Публикуем результат фильтрации
+        filtered_data = [self.original_data[key] for key in filtered_keys]
+
+        self._publish_filtered(filtered_data)
+        self._update_history(term, filtered_keys)
+
+    def _publish_filtered(self, data: List[List[str]]):
         EventBus.publish(
             Event(
                 event_type=EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE,
                 group_id=self._group_id
             ),
-            filtered_data,
+            data
         )
 
-        # Обновляем историю
-        self.history.append((term, filtered_data))
+    def _update_history(self, term: str, keys: List[str]):
+        self.history.append((term, keys))
         if len(self.history) > self.max_history:
             self.history.pop(0)
 
     def sort_data(self, column_idx: int, column_name: str, direction: int):
-        pass
+        self.current_sort = (column_idx, column_name, direction)
+        term = self.current_filter_term
+
+        try:
+            keys = list(self.original_data.keys())
+
+            if direction:
+                if column_name == "ID":
+                    keys.sort(
+                        key=lambda k: int(self.original_data[k][column_idx]),
+                        reverse=(direction < 0))
+                else:
+                    keys.sort(
+                        key=lambda k: self.original_data[k][column_idx].lower(),
+                        reverse=(direction < 0))
+
+            self.sorted_keys = keys
+        except Exception as e:
+            self._logger.warning(f"Sort failed: {e}")
+            self.sorted_keys = list(self.original_data.keys())
+
+        self.history.clear()
+        self.filter_data(term)
 
     def update_item(self, row: List[str]):
         card_id = row[0]
         self.original_data[card_id] = row
-        self.history.clear()
-        # TODO: Тут буфер должен опубликовать для таблицы что-то, но будет зависеть от
-        #  логики которая будет написана позже, пока не ясно
+
+        column_idx, column_name, direction = self.current_sort
+        self.sort_data(column_idx, column_name, direction)
 
         EventBus.publish(Event(
-            event_type=EventType.VIEW.TABLE.BUFFER.CARD_VALUES_LIST,
+            event_type=EventType.VIEW.TABLE.BUFFER.CARD_UPDATED,
             group_id=self._group_id
         ), row)
 
     def delete_items(self, deleted_ids: List[str], _group_id: str):
         for item_id in deleted_ids:
-            self.original_data.pop(item_id)
+            self.original_data.pop(item_id, None)
         self.history.clear()
+
+        # Обновляем sorted_keys после удаления
+        self.sorted_keys = [k for k in self.sorted_keys if k not in deleted_ids]
 
 
 class Table(ttk.Frame):

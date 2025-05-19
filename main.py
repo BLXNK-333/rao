@@ -12,7 +12,7 @@ class Zalupa:
     def __init__(self):
         handlers = [
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.zalupa_print),
-            (EventType.BACK.DB.CARD_VALUES_LIST, self.zalupa_print),
+            (EventType.BACK.DB.CARD_VALUES, self.zalupa_print),
         ]
         for e, h in handlers:
             EventBus.subscribe(
@@ -42,6 +42,7 @@ if __name__ == '__main__':
 
     SONGS_DICT = {row[0]: list(row) for row in all_songs_list}
     view.songs.buffer.original_data = SONGS_DICT
+    view.songs.buffer.sorted_keys = list(SONGS_DICT.keys())
     view.card_manager.set_headers(HEADERS)
 
     view.terminal.term_panel.create_widget()

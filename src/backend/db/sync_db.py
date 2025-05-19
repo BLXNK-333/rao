@@ -60,7 +60,7 @@ class SyncDB:
             EventBus.publish(Event(EventType.BACK.DB.CARD_ID), card_key, card_id)
 
         EventBus.publish(Event(
-            event_type=EventType.BACK.DB.CARD_VALUES_LIST,
+            event_type=EventType.BACK.DB.CARD_VALUES,
             group_id=GROUP(table_name)
         ), list(data.values()))
 
