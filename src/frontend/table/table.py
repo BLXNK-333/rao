@@ -10,7 +10,7 @@ import tkinter.font as tkFont
 
 from ..widgets import UndoEntry
 from ...eventbus import Subscriber, EventBus, Event
-from ...enums import EventType, DispatcherType, GROUP, ICON
+from ...enums import EventType, DispatcherType, GROUP, ICON, HEADER
 from ..icons.icon_map import Icons
 
 
@@ -28,6 +28,7 @@ class DataTable(ttk.Frame):
         # Текущее состояние сортировки: (column_name, direction),
         # где direction = 1 (▲), -1 (▼), 0 (нет)
         self._current_sort: Optional[Tuple[str, int]] = None
+        self._sort_debounce_id = None
 
         self.subscribe()
 
@@ -123,8 +124,18 @@ class DataTable(ttk.Frame):
                 self._current_sort = (column, 1)
                 self.dt.heading(column, text=f"{column} ▲")
 
+        # Дебаунс публикации события
+        if self._sort_debounce_id:
+            self.after_cancel(self._sort_debounce_id)
+
+        # Через 300 мс вызовем publish с текущим состоянием сортировки
+        self._sort_debounce_id = self.after(300, partial(self._debounced_sort_publish))
+
+    def _debounced_sort_publish(self):
+        self._sort_debounce_id = None
         EventBus.publish(
-            Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED, group_id=self._group_id),
+            Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED,
+                  group_id=self._group_id),
             *self._get_sort_state()
         )
 
@@ -179,7 +190,6 @@ class DataTable(ttk.Frame):
                 self.dt.column(col, width=base_width, stretch=False)
 
     def _insert_row_to(self, row: List[str], index: int):
-        print(index, row)
         card_id = row[0]
         if self.dt.exists(card_id):
             self.dt.delete(card_id)  # Удаляем старую строку
@@ -573,6 +583,19 @@ class Table(ttk.Frame):
         self.table_panel = TablePanel(parent=self, group_id=group_id)
         self.data_table = DataTable(parent=self, group_id=group_id)
         self.buffer = TableBuffer(group_id=group_id)
+
+    def setup(self, headers: List[str], data: List[List[str]],
+                   stretchable_column_indices: List[int]):
+
+        SONGS_DICT = {row[0]: list(row) for row in data}
+        self.buffer.original_data = SONGS_DICT
+        self.buffer.sorted_keys = list(SONGS_DICT.keys())
+
+        self.data_table.create_table(
+            headers=headers,
+            data=data,
+            stretchable_column_indices=stretchable_column_indices
+        )
 
     def _setup_layout(self):
         """Настраивает `grid` для размещения элементов."""
