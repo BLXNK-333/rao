@@ -103,6 +103,7 @@ class EventType:
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"
                 CARD_UPDATED = "VIEW.TABLE.CARD_UPDATED"
+                INVISIBLE_ID = "VIEW.TABLE.INVISIBLE_ID"
 
         class CARD:
             SAVE = "VIEW.CARD.SAVE"
