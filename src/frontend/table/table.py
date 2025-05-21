@@ -363,14 +363,6 @@ class TablePanel(ttk.Frame):
 
 
 class TableBuffer:
-    # TODO: Протестировать логику этого классы, возможно стоит покрыть тестами
-    #  и писать через них, также возможно стоит оптимизировать логику.
-    #  Нужно оптимизировать метод update_item, и сделать чтобы он возвращал публиковал
-    #  индекс и строку для вставки если нужно.
-    #  Удалить хуету с поисками, и прочим сделать вставку за N log n, добавить
-    #  только функцию сортировки _sort_key. (Потом править с последнего камита)
-    #  PS: Потестировать еще.
-
     def __init__(self, group_id: GROUP, max_history: int = 10):
         self._group_id = group_id
         self.original_data: Dict[str, List[str]] = {}
@@ -415,10 +407,8 @@ class TableBuffer:
                     base_keys = prev_keys
                     break
 
-            filtered_keys = [
-                key for key in base_keys
-                if any(term in cell.lower() for cell in self.original_data.get(key, []))
-            ]
+            filtered_keys = [key for key in base_keys if
+                             self._passes_filter(self.original_data.get(key, []))]
         else:
             filtered_keys = base_keys
 
@@ -447,13 +437,11 @@ class TableBuffer:
 
         try:
             keys = list(self.original_data.keys())
-
             if direction:
                 keys.sort(
                     key=lambda k: self._sort_key(k, column_idx, column_name),
                     reverse=(direction < 0)
                 )
-
             self.sorted_keys = keys
         except Exception as e:
             self._logger.warning(f"Sort failed: {e}")
@@ -466,7 +454,9 @@ class TableBuffer:
         card_id = row[0]
         self.original_data[card_id] = row
 
-        # Пытаемся найти и удалить элемент, если он есть
+        term = self.current_filter_term.strip().lower()
+        is_match = self._passes_filter(row)
+
         try:
             old_pos = self.sorted_keys.index(card_id)
             self.sorted_keys.pop(old_pos)
@@ -475,52 +465,82 @@ class TableBuffer:
             old_pos = None
             was_present = False
 
-        # Проверяем фильтр
-        term = self.current_filter_term.strip().lower()
-        matches_filter = (not term or any(term in cell.lower() for cell in row))
-
-        if not matches_filter:
-            # Если строка больше не проходит фильтр, удаляем и уведомляем
+        if not is_match:
             self._publish_invisible_id(card_id)
             return
 
-        # Добавляем обратно в отсортированный список
-        self._insert_sorted_key(card_id, was_present, old_pos)
+        pos = self._find_insert_position(card_id, was_present, old_pos)
+        self.sorted_keys.insert(pos, card_id)
 
-        # Сбрасываем историю (фильтрация будет повторена)
         self.history.clear()
 
-        # Формируем отфильтрованный список (учитываем фильтр при вставке)
-        filtered_keys = [
-            k for k in self.sorted_keys
-            if not term or any(term in cell.lower() for cell in self.original_data[k])
-        ]
-
-        try:
-            index = filtered_keys.index(card_id)
-        except ValueError:
-            self._logger.warning(
-                f"Card {card_id} not found in filtered list after insert")
-            return
+        if not term:
+            index = pos
+        else:
+            filtered_keys = [
+                k for k in self.sorted_keys
+                if self._passes_filter(self.original_data[k])
+            ]
+            try:
+                index = filtered_keys.index(card_id)
+            except ValueError:
+                self._logger.warning(f"Card {card_id} not found in filtered list after insert")
+                return
 
         EventBus.publish(
             Event(EventType.VIEW.TABLE.BUFFER.CARD_UPDATED, group_id=self._group_id),
             row, index
         )
 
-    def _publish_invisible_id(self, card_id):
+    def delete_items(self, deleted_ids: List[str], _group_id: str):
+        for item_id in deleted_ids:
+            self.original_data.pop(item_id, None)
+        self.history.clear()
+        self.sorted_keys = [k for k in self.sorted_keys if k not in deleted_ids]
+
+    def _publish_invisible_id(self, card_id: str):
         self._insert_sorted_key(card_id)
         self.history.clear()
-
         EventBus.publish(
             Event(EventType.VIEW.TABLE.BUFFER.INVISIBLE_ID, group_id=self._group_id),
             card_id
         )
 
-    def _sort_key(self, card_id, column_idx, column_name):
-        val = self.original_data[card_id][column_idx]
+    def _insert_sorted_key(self, card_id: str, was_present: bool = False,
+                           old_pos: int | None = None):
+        pos = self._find_insert_position(card_id, was_present, old_pos)
+        self.sorted_keys.insert(pos, card_id)
 
-        # Основной ключ сортировки
+    def _find_insert_position(self, card_id: str, was_present: bool,
+                              old_pos: int | None = None) -> int:
+        column_idx, column_name, direction = self.current_sort
+
+        if direction == 0:
+            return old_pos if was_present and old_pos is not None else len(self.sorted_keys)
+
+        new_key = self._sort_key(card_id, column_idx, column_name)
+
+        def get_key(k: str):
+            return self._sort_key(k, column_idx, column_name)
+
+        left, right = 0, len(self.sorted_keys)
+        while left < right:
+            mid = (left + right) // 2
+            mid_key = get_key(self.sorted_keys[mid])
+            if direction < 0:
+                if mid_key > new_key:
+                    left = mid + 1
+                else:
+                    right = mid
+            else:
+                if mid_key < new_key:
+                    left = mid + 1
+                else:
+                    right = mid
+        return left
+
+    def _sort_key(self, card_id: str, column_idx: int, column_name: str):
+        val = self.original_data[card_id][column_idx]
         if column_name == "ID":
             primary_key = int(val)
         elif column_name.lower() == "время":
@@ -533,7 +553,6 @@ class TableBuffer:
         else:
             primary_key = val.lower()
 
-        # Вторичный ключ — ID как целое число (всегда 0-й столбец)
         try:
             id_key = int(self.original_data[card_id][0])
         except ValueError:
@@ -541,49 +560,9 @@ class TableBuffer:
 
         return primary_key, id_key
 
-    def _insert_sorted_key(self, card_id: str, was_present: bool = False,
-                           old_pos: int | None = None):
-        pos = self._find_insert_position(card_id, was_present, old_pos)
-        self.sorted_keys.insert(pos, card_id)
-
-    def _find_insert_position(self, card_id: str, was_present: bool,
-                              old_pos: int | None = None) -> int:
-        column_idx, column_name, direction = self.current_sort
-
-        if direction == 0:
-            if was_present and old_pos is not None:
-                # Возвращаем прежнюю позицию
-                return old_pos
-            else:
-                return len(self.sorted_keys)
-
-        new_key = self._sort_key(card_id, column_idx, column_name)
-
-        left, right = 0, len(self.sorted_keys)
-        while left < right:
-            mid = (left + right) // 2
-            mid_key = self._sort_key(self.sorted_keys[mid], column_idx, column_name)
-
-            if direction < 0:
-                if mid_key > new_key:
-                    left = mid + 1
-                else:
-                    right = mid
-            else:
-                if mid_key < new_key:
-                    left = mid + 1
-                else:
-                    right = mid
-
-        return left
-
-    def delete_items(self, deleted_ids: List[str], _group_id: str):
-        for item_id in deleted_ids:
-            self.original_data.pop(item_id, None)
-        self.history.clear()
-
-        # Обновляем sorted_keys после удаления
-        self.sorted_keys = [k for k in self.sorted_keys if k not in deleted_ids]
+    def _passes_filter(self, row: List[str]) -> bool:
+        term = self.current_filter_term.strip().lower()
+        return not term or any(term in cell.lower() for cell in row)
 
 
 class Table(ttk.Frame):
