@@ -22,9 +22,12 @@ class Terminal(ttk.Frame):
         self.term_panel = TermPanel(self)
         self.term_logger = TermLogger(self)
 
-    def init_state(self, state: TERM):
+    def setup(self, state: TERM, msg_queue: Queue):
         self.term_panel.set_active_state(state)
         self.term_logger.set_state(state)
+        self.term_logger.set_msq_queue(msg_queue)
+        self.term_panel.create_widget()
+        self.term_logger.create_widget()
 
 
 class TermPanel(ttk.Frame):

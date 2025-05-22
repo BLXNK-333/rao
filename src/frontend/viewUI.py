@@ -73,7 +73,6 @@ class ViewUI(ThemedTk, BaseWindow):
                 self.hide_frame()
             self.display_terminal()
 
-        self.terminal.init_state(self.terminal_state)
         self.subscribe()
         self.center_window()
 
