@@ -180,7 +180,6 @@ class TopMenu(MenuBar):
         :param fix_size: Whether the tab menu should use fixed width for tabs.
         """
         super().__init__(master, on_tab_selected=on_tab_selected, fix_size=fix_size)
-        self.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
         # Create terminal toggle label on the right
         self.term_toggler = TermToggler(

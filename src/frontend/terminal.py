@@ -184,8 +184,20 @@ class TermLogger(ttk.Frame):
             )
 
     def create_widget(self):
-        self.text = tk.Text(self, height=self.HEIGHTS[self.active_state],
-                            bg=self.BACKGROUND, fg=self.FOREGROUND, state="disabled")
+        self.text = tk.Text(
+            self,
+            height=self.HEIGHTS[self.active_state],
+            bg=self.BACKGROUND,
+            fg=self.FOREGROUND,
+            state="disabled",
+            bd=0,
+            highlightthickness=1,
+            highlightbackground="#555555",  # цвет рамки (неактивной)
+            highlightcolor="#555555",
+            padx = 3,  # горизонтальный отступ текста
+            pady = 5  # вертикальный отступ текста
+
+        )
         self.text.pack(expand=True, fill="both")
         self._configure_log_tags()
 
