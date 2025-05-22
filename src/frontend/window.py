@@ -33,7 +33,7 @@ class Window(ThemedTk, BaseWindow):
         self.terminal_state = TERM.MEDIUM   # (начальный размер)
         self.terminal = None                # (установить после через self.setup_layout)
 
-        self.subscribe()
+
 
     def subscribe(self):
         handlers = {
@@ -61,6 +61,9 @@ class Window(ThemedTk, BaseWindow):
                 self.hide_frame()
             self.display_terminal()
 
+        # Подписку сделал тут, после всех размещений, иначе подтормаживает
+        # переключение размеров терминала.
+        self.subscribe()
         self.center_window()
 
     def display_terminal(self):
@@ -80,7 +83,7 @@ class Window(ThemedTk, BaseWindow):
             if size == TERM.LARGE:
                 self.hide_frame()
             else:
-                self.after_idle(partial(self.show_frame))
+                self.show_frame()
 
     def hide_frame(self):
         self.content.grid_forget()
