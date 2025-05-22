@@ -11,7 +11,7 @@ from ..enums import TERM, EventType, DispatcherType
 
 
 class Terminal(ttk.Frame):
-    def __init__(self, master: tk.Tk) -> None:
+    def __init__(self, master: tk.Tk, state: TERM, msg_queue: Queue) -> None:
         """
         Initialize the Terminal widget and its internal components.
 
@@ -21,8 +21,9 @@ class Terminal(ttk.Frame):
         # UI components
         self.term_panel = TermPanel(self)
         self.term_logger = TermLogger(self)
+        self._setup_options(state, msg_queue)
 
-    def setup(self, state: TERM, msg_queue: Queue):
+    def _setup_options(self, state: TERM, msg_queue: Queue):
         self.term_panel.set_active_state(state)
         self.term_logger.set_state(state)
         self.term_logger.set_msq_queue(msg_queue)

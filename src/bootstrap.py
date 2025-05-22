@@ -19,30 +19,37 @@ from .eventbus import EventBus, TkDispatcher, QueueDispatcher
 from .enums import DispatcherType, HEADER, GROUP
 
 
-
 def bootstrap():
     # TODO:
-    #  1. Рефакторить логику инициализации, чтобы можно было просто собрать классы через
+    #  +1. Рефакторить логику инициализации, чтобы можно было просто собрать классы через
     #     интерфейсы, а лучше через конструкторы, через DI.
     #  2. Добавить сконфигурированный виджет таблицы на фрейм report.
     #  3. Сделать значения по умолчанию, и "тайтлинги" для заголовков.
     #  4. Написал логику экспорта, и генератор excel таблиц.
     #  5. Тестировать логику приложения.
 
+    # -------------------------------
+    # Backend initialization
+    # -------------------------------
     backend = BackendService()
-
     set_logging_config(queue=backend.msg_queue)
     all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
-    all_report_list = ...
+    all_report_list = ...  # TODO: добавить логику формирования отчёта
 
+    # -------------------------------
+    # UI initialization
+    # -------------------------------
     window = Window()
     icons = Icons()
     UIStyles()
     apply_global_bindings(window)
 
-    # Основные фреймы (все фреймы в 1 строке сетки)
-    songs = Table(parent=window.content, group_id=GROUP.SONG_TABLE)
-    songs.setup(
+    # -------------------------------
+    # Main UI frames creation
+    # -------------------------------
+    songs = Table(
+        parent=window.content,
+        group_id=GROUP.SONG_TABLE,
         headers=get_headers(HEADER.SONGS),
         data=all_songs_list,
         stretchable_column_indices=[1, 2, 4, 5, 6]
@@ -55,8 +62,11 @@ def bootstrap():
     card_manager = CardManager(parent=window.content)
     card_manager.set_headers(HEADERS)
 
-    terminal = Terminal(master=window)
-    terminal.setup(state=window.terminal_state, msg_queue=backend.msg_queue)
+    terminal = Terminal(
+        master=window,
+        state=window.terminal_state,
+        msg_queue=backend.msg_queue
+    )
 
     menu = TopMenu(
         master=window,
@@ -66,16 +76,23 @@ def bootstrap():
         fix_size=False
     )
 
-    # Добавляем обычные вкладки
+    # -------------------------------
+    # Menu tabs setup
+    # -------------------------------
     menu.add_tab("Songs", songs, image=icons[ICON.SONGS_LIST_24])
     menu.add_tab("Report", report, image=icons[ICON.REPORT_LIST_24])
     menu.add_tab("Export", export, image=icons[ICON.EXPORT_24])
     menu.add_tab("Settings", settings, image=icons[ICON.SETTINGS_24])
 
+    # -------------------------------
+    # Window initial layout
+    # -------------------------------
     window.switch_frame(songs)
     window.setup_layout(menu=menu, terminal=terminal)
 
-
+    # -------------------------------
+    # EventBus and dispatchers setup
+    # -------------------------------
     tk_dispatcher = TkDispatcher(tk=window)
     db_dispatcher = QueueDispatcher()
     table_dispatcher = QueueDispatcher()
@@ -87,6 +104,13 @@ def bootstrap():
     EventBus.register_dispatcher(DispatcherType.COMMON, common_dispatcher)
 
     EventBus.start()
+
+    # -------------------------------
+    # Start main application loop
+    # -------------------------------
     window.run()
 
+    # -------------------------------
+    # Cleanup on exit
+    # -------------------------------
     EventBus.stop_all_dispatchers()

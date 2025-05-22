@@ -576,7 +576,14 @@ class TableBuffer:
 
 
 class Table(ttk.Frame):
-    def __init__(self, parent, group_id: GROUP):
+    def __init__(
+            self,
+            parent,
+            group_id: GROUP,
+            headers: List[str],
+            data: List[List[str]],
+            stretchable_column_indices: List[int]
+    ):
         super().__init__(parent)
         self._setup_layout()
 
@@ -584,7 +591,9 @@ class Table(ttk.Frame):
         self.data_table = DataTable(parent=self, group_id=group_id)
         self.buffer = TableBuffer(group_id=group_id)
 
-    def setup(self, headers: List[str], data: List[List[str]],
+        self._setup_options(headers, data, stretchable_column_indices)
+
+    def _setup_options(self, headers: List[str], data: List[List[str]],
                    stretchable_column_indices: List[int]):
 
         SONGS_DICT = {row[0]: list(row) for row in data}
