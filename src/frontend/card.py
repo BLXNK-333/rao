@@ -1,5 +1,6 @@
 import random
 import string
+import copy
 
 import tkinter as tk
 from tkinter import ttk
@@ -199,7 +200,7 @@ class CardManager:
     def __init__(self, parent: tk.Frame):
         self.parent = parent
         self.opened_cards: Dict[str, CardEditor] = {}
-        self.headers = {}
+        self.default_values = {}
 
         self.subscribe()
 
@@ -218,8 +219,8 @@ class CardManager:
                 subscriber=Subscriber(callback=handler, route_by=DispatcherType.TK)
             )
 
-    def set_headers(self, value: Dict[HEADER, List[str]]):
-        self.headers = value
+    def set_default_card_values(self, values_dict: Dict[HEADER, Dict[str, str]]):
+        self.default_values = values_dict
 
     def _update_card_id(self, card_key: str, card_id: str):
         card = self.opened_cards.get(card_key)
@@ -240,12 +241,15 @@ class CardManager:
 
     def open_card(self, table: str, card_dict: Dict[str, str]):
         card_key = self.generate_card_key()
+        headers = list(self.default_values.get(table).keys())
+        data = card_dict if card_dict else copy.deepcopy(self.default_values.get(table))
+
         card = CardEditor(
             parent=self.parent,
             card_key=card_key,
             table=table,
-            headers=self.headers.get(table),
-            data=card_dict
+            headers=headers,
+            data=data
         )
         self.opened_cards[card_key] = card
 

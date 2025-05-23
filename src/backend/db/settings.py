@@ -1,31 +1,31 @@
 from ...enums import HEADER
 
 
-HEADERS = {
-    HEADER.SONGS: [
-        "ID",
-        "Исполнитель",
-        "Название",
-        "Время",
-        "Композитор",
-        "Автора текста",
-        "Лэйбл"
-    ],
-    HEADER.REPORT: [
-        "ID",
-        "Дата",
-        "Время",
-        "Исполнитель",
-        "Название",
-        "Длительность звучания",
-        "Общий хронометраж",
-        "Композитор",
-        "Автор текста",
-        "Передача",
-        "Количество исполнений",
-        "Жанр",
-        "Лэйбл"
-    ]
+DEFAULT_CARD_VALUES = {
+    HEADER.SONGS: {
+        "ID": "",
+        "Исполнитель": "",
+        "Название": "",
+        "Время": "",
+        "Композитор": "",
+        "Автора текста": "",
+        "Лэйбл": "ZAO Zalupa Prod."
+    },
+    HEADER.REPORT: {
+        "ID": "",
+        "Дата": "",
+        "Время": "",
+        "Исполнитель": "",
+        "Название": "",
+        "Длительность звучания": "",
+        "Общий хронометраж": "",
+        "Композитор": "",
+        "Автор текста": "",
+        "Передача": "",
+        "Количество исполнений": "",
+        "Жанр": "",
+        "Лэйбл": ""
+    }
 }
 
 
@@ -58,7 +58,7 @@ FIELD_MAPS = {
 
 
 def get_headers(header: HEADER):
-    return HEADERS.get(header)
+    return list(DEFAULT_CARD_VALUES.get(header).keys())
 
 
 def map_ui_to_model_fields(data: dict, table_name: str) -> dict:
@@ -82,7 +82,7 @@ def map_ui_to_model_fields(data: dict, table_name: str) -> dict:
 def map_db_rows_to_view_order(table_name: str, rows: list[dict]) -> list[list[str]]:
     """
     Преобразует список строк из БД (каждая — dict с ключами как имена полей модели)
-    в список списков значений в порядке, определённом HEADERS (для UI).
+    в список списков значений в порядке, определённом DEFAULT_CARD_VALUES (для UI).
 
     :param table_name: имя таблицы 'songs' или 'report'
     :param rows: список dict с данными из БД

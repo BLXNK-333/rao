@@ -1,7 +1,7 @@
 from .backend.service import BackendService
 from .frontend.window import Window
 
-from .backend.db.settings import get_headers, HEADERS
+from .backend.db.settings import get_headers, DEFAULT_CARD_VALUES
 
 from .frontend.report import Report
 from .frontend.export import Export
@@ -24,7 +24,8 @@ def bootstrap():
     #  +1. Рефакторить логику инициализации, чтобы можно было просто собрать классы через
     #     интерфейсы, а лучше через конструкторы, через DI.
     #  2. Добавить сконфигурированный виджет таблицы на фрейм report.
-    #  3. Сделать значения по умолчанию, и "тайтлинги" для заголовков.
+    #  +3. Сделать значения по умолчанию, и "тултипы" для заголовков
+    #      (насчет тултипов, не ясно пока нужны ли они).
     #  4. Написал логику экспорта, и генератор excel таблиц.
     #  5. Тестировать логику приложения.
 
@@ -60,7 +61,7 @@ def bootstrap():
     settings = Settings(parent=window.content)
 
     card_manager = CardManager(parent=window.content)
-    card_manager.set_headers(HEADERS)
+    card_manager.set_default_card_values(DEFAULT_CARD_VALUES)
 
     terminal = Terminal(
         master=window,
