@@ -32,8 +32,10 @@ class Terminal(ttk.Frame):
 
 
 class TermPanel(ttk.Frame):
+    widget_color = "#dbdbdb"
+
     def __init__(self, parent: ttk.Frame):
-        super().__init__(parent)
+        super().__init__(parent, style="TermPanel.TFrame")
         self.pack(fill="x")
         self.icons = Icons()
         self.buttons = {}
@@ -56,7 +58,7 @@ class TermPanel(ttk.Frame):
 
     def create_widget(self) -> None:
         """Создаёт заголовок и кнопки управления."""
-        label = ttk.Label(self, text="Terminal", font=("Arial", 10))
+        label = ttk.Label(self, text="Terminal", style="TermPanel.TLabel")
         label.pack(side="left", padx=10)
 
         # Кнопки управления
@@ -69,8 +71,16 @@ class TermPanel(ttk.Frame):
             ("STOP", ICON.STOP_GRAY_16, self.on_stop_clicked)
         ]
         for key, icon, command in icons_map:
-            btn = ttk.Button(self, image=self.icons[icon], command=command)
-            btn.pack(side="right", padx=2)
+            btn = tk.Button(
+                self, image=self.icons[icon], command=command, relief="flat",
+                background=self.widget_color,
+                activebackground="#c9c9c9",
+                borderwidth=1,
+                highlightthickness=2,
+                highlightcolor = self.widget_color,
+                highlightbackground = self.widget_color
+            )
+            btn.pack(side="right", padx=5, pady=3)
             self.buttons[key] = btn
 
         self._update_size_icons(active_state=self.active_state)

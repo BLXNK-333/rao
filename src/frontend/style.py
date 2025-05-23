@@ -8,6 +8,7 @@ class UIStyles(ttk.Style):
         self.configure_table_styles()
         self.configure_card_styles()
         self.configure_menu_style()
+        self.configure_term_panel_style()
 
     def configure_table_styles(self):
         """Настраивает стили для таблицы (Treeview)"""
@@ -44,3 +45,9 @@ class UIStyles(ttk.Style):
                        background="#e5e5e5")  # светлый серый фон для активной вкладки
         self.configure("ActiveTab.TLabel", background="#e5e5e5", foreground="black",
                        font=("Segoe UI", 12))
+
+    def configure_term_panel_style(self):
+        """Настраивает стили для панели терминала"""
+        self.configure("TermPanel.TFrame", background="#dbdbdb")
+        self.configure("TermPanel.TLabel", background="#dbdbdb", foreground="black",
+                        font=("Arial", 10))
