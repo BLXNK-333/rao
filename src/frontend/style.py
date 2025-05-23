@@ -40,6 +40,10 @@ class UIStyles(ttk.Style):
         self.configure("Tab.TLabel", background="#c9c9c9", foreground="#444444",
                        font=("Segoe UI", 12))
 
+        self.configure("TabHover.TFrame", background="#d0d0d0")  # цвет при hover
+        self.configure("TabHover.TLabel", background="#d0d0d0", foreground="#444444",
+                        font=("Segoe UI", 12))
+
         # Настройка активной вкладки
         self.configure("ActiveTab.TFrame",
                        background="#e5e5e5")  # светлый серый фон для активной вкладки

@@ -7,8 +7,8 @@ from .frontend.report import Report
 from .frontend.export import Export
 from .frontend.settings import Settings
 from .frontend.terminal import Terminal
-from .frontend.table.table import Table
-from .frontend.table.card import CardManager
+from .frontend.table import Table
+from .frontend.card import CardManager
 from .frontend.menu import TopMenu
 from .frontend.icons.icon_map import Icons, ICON
 from .frontend.style import UIStyles

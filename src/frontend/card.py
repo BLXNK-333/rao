@@ -2,12 +2,12 @@ import random
 import string
 
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk
 from typing import List, Dict, Callable
 
-from ..widgets import BaseWindow, ScrolledFrame, UndoText
-from ...eventbus import Event, EventBus, Subscriber
-from ...enums import EventType, DispatcherType, HEADER
+from .widgets import BaseWindow, ScrolledFrame, UndoText
+from ..eventbus import Event, EventBus, Subscriber
+from ..enums import EventType, DispatcherType, HEADER
 
 
 class CardFields(ttk.Frame):

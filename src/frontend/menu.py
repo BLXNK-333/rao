@@ -27,6 +27,8 @@ class Tab(ttk.Frame):
         self.label.pack(fill='both', expand=True, padx=10, pady=5)
 
         self._bind_all("<Button-1>", self._on_click)
+        self._bind_all("<Enter>", self._on_enter)
+        self._bind_all("<Leave>", self._on_leave)
         self.set_common()
 
     def _bind_all(self, event, callback):
@@ -36,6 +38,18 @@ class Tab(ttk.Frame):
     def _on_click(self, event):
         if self.command:
             self.command(self)
+
+    def _on_enter(self, event):
+        if not self.active:
+            # При наведении меняем стиль на "hover"
+            self.configure(style="TabHover.TFrame")
+            self.label.configure(style="TabHover.TLabel")
+
+    def _on_leave(self, event):
+        if not self.active:
+            # Убираем hover, возвращаем обычный стиль
+            self.configure(style="Tab.TFrame")
+            self.label.configure(style="Tab.TLabel")
 
     def set_active(self):
         self.active = True
