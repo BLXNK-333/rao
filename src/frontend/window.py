@@ -3,9 +3,7 @@ from functools import partial
 from tkinter import ttk
 from ttkthemes import ThemedTk
 
-from .widgets import BaseWindow
-from .menu import TopMenu
-from .terminal import Terminal
+from .widgets import BaseWindow, TopMenu, Terminal
 
 from ..eventbus import EventBus, Subscriber, Event
 from ..enums import TERM, EventType, DispatcherType

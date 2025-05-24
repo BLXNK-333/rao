@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from typing import List, Tuple, Dict
 import datetime
@@ -5,9 +6,8 @@ import datetime
 from tkinter import ttk, StringVar, filedialog
 import tkinter as tk
 
-from .widgets import ScrolledFrame, UndoEntry
-from .icons.icon_map import Icons
-from ..enums import ICON
+from ..widgets import ScrolledFrame, UndoEntry
+from ..icons.icon_map import Icons
 
 
 class ExportSection(ttk.Frame):
@@ -128,6 +128,7 @@ class Export(ttk.Frame):
     def __init__(self, parent: ttk.Frame):
         super().__init__(parent)
         self.configure_grid()
+        self._logger = logging.getLogger(__name__)
 
         self.inner = ttk.Frame(self)
         self.inner.grid(row=0, column=0, sticky="nsew")
@@ -192,9 +193,11 @@ class Export(ttk.Frame):
         quarterly_section.grid(row=1, column=0, sticky="ew", pady=(20, 0))
 
     def export_monthly(self, fmt: str, vars: dict):
-        print(f"[MONTHLY] Export {vars['month'].get()} {vars['year'].get()} to {vars['path'].get()} as {fmt}")
+        self._logger.info(f"[MONTHLY] Export {vars['month'].get()} {vars['year'].get()} "
+                          f"to {vars['path'].get()} as {fmt}")
         # TODO: implement export logic
 
     def export_quarterly(self, fmt: str, vars: dict):
-        print(f"[QUARTERLY] Export {vars['quarter'].get()} {vars['year'].get()} to {vars['path'].get()} as {fmt}")
+        self._logger.info(f"[QUARTERLY] Export {vars['quarter'].get()} {vars['year'].get()} "
+                          f"to {vars['path'].get()} as {fmt}")
         # TODO: implement export logic

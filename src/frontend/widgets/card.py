@@ -7,8 +7,8 @@ from tkinter import ttk
 from typing import List, Dict, Callable
 
 from .widgets import BaseWindow, ScrolledFrame, UndoText
-from ..eventbus import Event, EventBus, Subscriber
-from ..enums import EventType, DispatcherType, HEADER
+from ...eventbus import Event, EventBus, Subscriber
+from ...enums import EventType, DispatcherType, HEADER
 
 
 class CardFields(ttk.Frame):

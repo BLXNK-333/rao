@@ -9,9 +9,9 @@ from tkinter import ttk
 import tkinter.font as tkFont
 
 from .widgets import UndoEntry
-from .icons.icon_map import Icons
-from ..eventbus import Subscriber, EventBus, Event
-from ..enums import EventType, DispatcherType, GROUP, ICON
+from ..icons import Icons
+from ...eventbus import Subscriber, EventBus, Event
+from ...enums import EventType, DispatcherType, GROUP, ICON
 
 
 class DataTable(ttk.Frame):

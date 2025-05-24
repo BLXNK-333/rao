@@ -3,13 +3,8 @@ from .frontend.window import Window
 
 from .backend.db.settings import get_headers, DEFAULT_CARD_VALUES
 
-from .frontend.report import Report
-from .frontend.export import Export
-from .frontend.settings import Settings
-from .frontend.terminal import Terminal
-from .frontend.table import Table
-from .frontend.card import CardManager
-from .frontend.menu import TopMenu
+from .frontend.frames import Report, Export, Settings
+from .frontend.widgets import Terminal, Table, CardManager, TopMenu
 from .frontend.icons.icon_map import Icons, ICON
 from .frontend.style import UIStyles
 from .frontend.bindings import apply_global_bindings

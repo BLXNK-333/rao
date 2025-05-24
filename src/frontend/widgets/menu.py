@@ -3,9 +3,9 @@ from collections.abc import Callable
 import tkinter as tk
 from tkinter import ttk
 
-from .icons.icon_map import Icons, ICON
-from ..eventbus import Subscriber, EventBus
-from ..enums import EventType, DispatcherType
+from ..icons import Icons
+from ...eventbus import Subscriber, EventBus
+from ...enums import EventType, DispatcherType, ICON
 
 
 class Tab(ttk.Frame):

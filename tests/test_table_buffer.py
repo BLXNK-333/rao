@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 
-from src.frontend.table.table import TableBuffer  # путь к модулю с TableBuffer
+from src.frontend.widgets.table import TableBuffer  # путь к модулю с TableBuffer
 from src.enums import EventType, GROUP
 from src.eventbus import EventBus
 

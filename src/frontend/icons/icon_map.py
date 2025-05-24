@@ -1,5 +1,6 @@
 import tkinter as tk
 from pathlib import Path
+
 from ...enums import ICON
 
 

@@ -5,9 +5,9 @@ from functools import partial
 import tkinter as tk
 from tkinter import ttk
 
-from .icons.icon_map import Icons, ICON
-from ..eventbus import Subscriber, EventBus, Event
-from ..enums import TERM, EventType, DispatcherType
+from ..icons import Icons
+from ...eventbus import Subscriber, EventBus, Event
+from ...enums import TERM, EventType, DispatcherType, ICON
 
 
 class Terminal(ttk.Frame):
