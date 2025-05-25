@@ -1,5 +1,4 @@
 import logging
-import time
 from functools import partial
 from typing import List, Dict, Set, Union, Tuple, Optional
 from collections.abc import ValuesView
@@ -12,20 +11,26 @@ import tkinter.font as tkFont
 from .widgets import UndoEntry, ToggleButton
 from ..icons import Icons
 from ...eventbus import Subscriber, EventBus, Event
-from ...enums import EventType, DispatcherType, GROUP, ICON
+from ...enums import EventType, DispatcherType, GROUP, ICON, STATE
 
 
 class DataTable(ttk.Frame):
+    size_states_map = {
+        GROUP.SONGS_TABLE: STATE.SONGS_COL_SIZE,
+        GROUP.REPORT_TABLE: STATE.REPORT_COL_SIZE
+    }
+
     def __init__(self, parent, group_id: GROUP):
         super().__init__(parent)
 
         self._group_id = group_id
         self._dt = None
         self._headers: List[str] = []
-        self._user_defined_widths: Dict[str, int] = {}
         self._stretchable_column_indices: Set[int] = set()
-        self.column_lengths: Dict[str, int] = {}
         self._table_len = 0
+
+        self.estimated_column_widths: Dict[str, int] = {}
+        self.user_defined_widths: Dict[str, int] = {}
 
         # Состояния
         self._col_sep_pressed = False
@@ -117,7 +122,7 @@ class DataTable(ttk.Frame):
             }
 
     def _on_mouse_release(self, event):
-        region = self.dt.identify_region(event.x, event.y)
+        # region = self.dt.identify_region(event.x, event.y)
         if not hasattr(self, '_initial_column_widths'):
             return
 
@@ -128,18 +133,24 @@ class DataTable(ttk.Frame):
                 old = self._initial_column_widths.get(col)
                 new = self.dt.column(col, option="width")
                 if old is not None and old != new:
-                    self._user_defined_widths[col] = new
+                    self.user_defined_widths[col] = new
                     is_changed = True
 
             if is_changed:
-                EventBus.publish(
-                    Event(
-                        event_type=EventType.VIEW.TABLE.DT.MANUAL_SIZE,
-                        group_id=self._group_id
-                    ),
-                    self._user_defined_widths
-                )
+                self._publish_cols_state()
             self._resize_columns()
+
+    def _publish_cols_state(self, auto_size: bool = False):
+        state_name = self.size_states_map.get(self._group_id)
+        event_type = EventType.VIEW.TABLE.DT.AUTO_COL_SIZE \
+            if auto_size else EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE
+        EventBus.publish(
+            Event(
+                event_type=event_type,
+                group_id=self._group_id
+            ),
+            state_name, self.user_defined_widths
+        )
 
     def _on_header_click(self, column: str):
         """Обрабатывает клик по заголовку колонки и обновляет стрелки сортировки."""
@@ -190,45 +201,47 @@ class DataTable(ttk.Frame):
         return -1, "", 0
 
     def _auto_size_widths(self):
-        self._user_defined_widths.clear()
+        self.user_defined_widths.clear()
         self._adjust_column_widths()
         self._resize_columns()
+        self._publish_cols_state(auto_size=True)
 
-    def _adjust_column_widths(self, sample_size: int = 20):
-        # TODO: Узкое место слишком тяжелый метод, нужно переделать логику.
-        #  Перенести вычисление в буфер таблицы и считать, написать там как-то, а сюда
-        #  отправлять событие с обновленными ширинами если нужно. Этот метод упростить
-        #  до сеттера, или избавиться.
-        #  Убрать лишние биндинги. Проверить метод _resize_columns, там 2 раза меняется
-        #  ширина, подумать как оптимизировать.
-        #  Добавить логику которая будет добавлять состояние ширин сьолбцов в таблицу
-        #  состояний в бд.
-        #  Понять почему не работает ресайз когда в таблице нетзаписей. Может должен по
-        #  заголовкам брать если путо в размрах.
+    def _adjust_column_widths(self):
+        # TODO:
+        #  + 1. Узкое место слишком тяжелый метод, нужно переделать логику.
+        #   Перенести вычисление в буфер таблицы и считать, написать там как-то, а сюда
+        #   отправлять событие с обновленными ширинами если нужно. Этот метод упростить
+        #   до сеттера, или избавиться.
+        #  - 2. Убрать лишние биндинги. Проверить метод _resize_columns, там 2 раза меняется
+        #   ширина, подумать как оптимизировать.
+        #  + 3. Добавить логику которая будет добавлять состояние ширин столбцов в таблицу
+        #   состояний в бд.
+        #  + 4. Понять почему не работает ресайз когда в таблице нет записей. Может должен по
+        #   заголовкам брать если пусто в размерах.
+        #  - 5. Эта логика все время делает одно и тоже, и это нужно кэшировать
+        #   (пока размеры считаются только на старте, и нет логики обновлений self.estimated_column_widths).
         """Adjust column widths based on column header and first N rows (sample_size),
         unless the user has manually set the width already."""
-        start = time.time()
+
         font = tkFont.Font()
         padding = 0
 
-        for idx, (col, char_count) in enumerate(self.column_lengths.items()):
-            if col in self._user_defined_widths:
+        for idx, (col, char_count) in enumerate(self.estimated_column_widths.items()):
+            if col in self.user_defined_widths:
                 continue
             # Один вызов measure для строки длины N
             sample_text = "w" * char_count
             px_width = font.measure(sample_text) + padding
-            self._user_defined_widths[col] = px_width
+            self.user_defined_widths[col] = px_width
             self.dt.column(col, width=px_width, stretch=False)
 
-        print(f"_adjust_column_widths: {time.time() - start}")
-
     def _resize_columns(self, event=None):
-        if not self._headers or not self._user_defined_widths:
+        if not self._headers or not self.user_defined_widths:
             return
 
         total_width = self.winfo_width() - self.scroll_y.winfo_width()
         current_total = sum(
-            self._user_defined_widths.get(col, 100) for col in self._headers
+            self.user_defined_widths.get(col, 100) for col in self._headers
         )
 
         stretchables = [
@@ -238,7 +251,7 @@ class DataTable(ttk.Frame):
 
         # Применяем базовые пользовательские ширины
         for col in self._headers:
-            base_width = self._user_defined_widths.get(col, 100)
+            base_width = self.user_defined_widths.get(col, 100)
             self.dt.column(col, width=base_width, stretch=False)
 
         # Если нет stretchable колонок или нет лишнего места — ничего не растягиваем
@@ -250,7 +263,7 @@ class DataTable(ttk.Frame):
         per_column_extra = extra // len(stretchables)
 
         for col in stretchables:
-            base_width = self._user_defined_widths.get(col, 100)
+            base_width = self.user_defined_widths.get(col, 100)
             self.dt.column(col, width=base_width + per_column_extra, stretch=True)
 
     def _insert_row_to(self, row: List[str], index: int):
@@ -315,7 +328,8 @@ class DataTable(ttk.Frame):
         if not selected_items:
             return
 
-        if not tk.messagebox.askyesno("Confirmation", "Operation requires confirmation."):
+        if not tk.messagebox.askyesno(
+                "Confirmation", "Operation requires confirmation."):
             return
 
         deleted_ids = []
@@ -366,7 +380,7 @@ class TablePanel(ttk.Frame):
 
     def subscribe(self):
         EventBus.subscribe(
-            EventType.VIEW.TABLE.DT.MANUAL_SIZE,
+            EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE,
             Subscriber(
                 callback=self.on_manual_size, group_id=self._group_id,
                 route_by=DispatcherType.TABLE
@@ -453,7 +467,7 @@ class TablePanel(ttk.Frame):
             )
         )
 
-    def on_manual_size(self, _user_sizes: Dict[str, int]):
+    def on_manual_size(self, *args):
         btn: ToggleButton = self.buttons[ICON.AUTO_SIZE_ON_24]
         if str(btn["state"]) == "disabled":
             btn.toggle()
@@ -670,31 +684,34 @@ class Table(ttk.Frame):
             group_id: GROUP,
             headers: List[str],
             data: List[List[str]],
-            stretchable_column_indices: List[int]
+            stretchable_column_indices: List[int],
+            prev_cols_state: Dict[str, int]
     ):
         super().__init__(parent)
         self._setup_layout()
 
+        # Init
         self.group_id = group_id
         self.table_panel = TablePanel(parent=self, group_id=group_id)
         self.data_table = DataTable(parent=self, group_id=group_id)
         self.buffer = TableBuffer(group_id=group_id)
 
-        self._setup_options(headers, data, stretchable_column_indices)
-
-    def _setup_options(self, headers: List[str], data: List[List[str]],
-                   stretchable_column_indices: List[int]):
-
+        # Configure
         SONGS_DICT = {row[0]: list(row) for row in data}
         self.buffer.original_data = SONGS_DICT
         self.buffer.sorted_keys = list(SONGS_DICT.keys())
-        self.data_table.column_lengths = self._estimate_column_lengths(headers, data)
+        self.data_table.estimated_column_widths = self._estimate_column_lengths(headers, data)
 
         self.data_table.create_table(
             headers=headers,
             data=data,
             stretchable_column_indices=stretchable_column_indices
         )
+        
+        if self.data_table.user_defined_widths != prev_cols_state:
+            self.table_panel.on_manual_size()
+        self.data_table.user_defined_widths = prev_cols_state
+        
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:

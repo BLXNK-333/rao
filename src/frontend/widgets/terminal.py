@@ -202,7 +202,7 @@ class TermLogger(ttk.Frame):
             highlightthickness=1,
             highlightbackground="#555555",  # цвет рамки (неактивной)
             highlightcolor="#555555",
-            padx = 3,  # горизонтальный отступ текста
+            padx = 5,  # горизонтальный отступ текста
             pady = 5  # вертикальный отступ текста
 
         )

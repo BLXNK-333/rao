@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, Date, Time
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -41,4 +41,4 @@ class State(Base):
     __tablename__ = 'state'
 
     key = Column(String, primary_key=True)
-    value = Column(Text, nullable=False)
+    value = Column(JSON, nullable=False)

@@ -11,7 +11,7 @@ from .frontend.bindings import apply_global_bindings
 
 from .logging_config import set_logging_config
 from .eventbus import EventBus, TkDispatcher, QueueDispatcher
-from .enums import DispatcherType, HEADER, GROUP
+from .enums import DispatcherType, HEADER, GROUP, STATE
 
 
 def bootstrap():
@@ -31,6 +31,8 @@ def bootstrap():
     set_logging_config(queue=backend.msg_queue)
     all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
     all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
+    songs_table_cols_state = backend.sync_db.get_state(STATE.SONGS_COL_SIZE)
+    report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
 
     # -------------------------------
     # UI initialization
@@ -48,7 +50,8 @@ def bootstrap():
         group_id=GROUP.SONGS_TABLE,
         headers=get_headers(HEADER.SONGS),
         data=all_songs_list,
-        stretchable_column_indices=[1, 2, 4, 5, 6]
+        stretchable_column_indices=[1, 2, 4, 5, 6],
+        prev_cols_state=songs_table_cols_state
     )
 
     report = Table(
@@ -56,7 +59,8 @@ def bootstrap():
         group_id=GROUP.REPORT_TABLE,
         headers=get_headers(HEADER.REPORT),
         data=all_report_list,
-        stretchable_column_indices=[3, 4, 7, 8, 12]
+        stretchable_column_indices=[3, 4, 7, 8, 12],
+        prev_cols_state=report_table_cols_state
     )
     export = Export(parent=window.content)
     settings = Settings(parent=window.content)

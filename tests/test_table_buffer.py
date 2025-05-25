@@ -15,16 +15,16 @@ def patch_eventbus_publish():
 
 @pytest.fixture
 def table_buffer():
-    return TableBuffer(group_id=GROUP.SONG_TABLE)
+    return TableBuffer(group_id=GROUP.SONGS_TABLE)
 
 
 @pytest.fixture
 def buffer_for_sort_tests():
-    return TableBuffer(group_id=GROUP.SONG_TABLE)
+    return TableBuffer(group_id=GROUP.SONGS_TABLE)
 
 
 def test_initial_state(table_buffer):
-    assert table_buffer._group_id == GROUP.SONG_TABLE
+    assert table_buffer._group_id == GROUP.SONGS_TABLE
     assert table_buffer.original_data == {}
     assert table_buffer.sorted_keys == []
     assert table_buffer.history == []
@@ -33,10 +33,10 @@ def test_initial_state(table_buffer):
     assert table_buffer.current_filter_term == ""
 
 
-@patch("src.frontend.table.table.EventBus.subscribe")
-@patch("src.frontend.table.table.EventBus.publish")
+@patch("src.frontend.widgets.table.EventBus.subscribe")
+@patch("src.frontend.widgets.table.EventBus.publish")
 def test_subscribe_called(mock_publish, mock_subscribe):
-    TableBuffer(group_id=GROUP.SONG_TABLE)
+    TableBuffer(group_id=GROUP.SONGS_TABLE)
 
     assert mock_subscribe.call_count == 4  # ✅ Проверка, что было ровно 4 подписки
 
@@ -124,7 +124,7 @@ def test_delete_items_removes_ids(table_buffer):
     table_buffer.sorted_keys = ["1", "2"]
     table_buffer.history = [("a", ["1", "2"])]
 
-    table_buffer.delete_items(["1"], GROUP.SONG_TABLE)
+    table_buffer.delete_items(["1"], GROUP.SONGS_TABLE)
     assert "1" not in table_buffer.original_data
     assert table_buffer.sorted_keys == ["2"]
     assert table_buffer.history == []

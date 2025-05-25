@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import tkinter as tk
 
@@ -13,9 +13,11 @@ class SongsTable(Table):
             group_id: GROUP,
             headers: List[str],
             data: List[List[str]],
-            stretchable_column_indices: List[int]
+            stretchable_column_indices: List[int],
+            prev_cols_state: Dict[str, int]
     ):
-        super().__init__(parent, group_id, headers, data, stretchable_column_indices)
+        super().__init__(parent, group_id, headers, data, stretchable_column_indices,
+                         prev_cols_state)
         self._create_add_to_report_button()
 
     def _create_add_to_report_button(self):

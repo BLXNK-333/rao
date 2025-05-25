@@ -60,6 +60,11 @@ class HEADER(StrEnum):
     REPORT = "report"
 
 
+class STATE(StrEnum):
+    SONGS_COL_SIZE = "songs_col_size"
+    REPORT_COL_SIZE = "report_col_size"
+
+
 class EventType:
     class BACK:
         class SIG:
@@ -102,7 +107,8 @@ class EventType:
                 EDIT_CARD = "VIEW.TABLE.DT.EDIT_CARD"
                 DELETE_CARDS = "VIEW.TABLE.DT.DELETE_CARDS"
                 SORT_CHANGED = "VIEW.TABLE.DT.SORT_CHANGED"
-                MANUAL_SIZE = "VIEW.TABLE.DT.MANUAL_SIZE"
+                MANUAL_COL_SIZE = "VIEW.TABLE.DT.MANUAL_COL_SIZE"
+                AUTO_COL_SIZE = "VIEW.TABLE.DT.AUTO_COL_SIZE"
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"

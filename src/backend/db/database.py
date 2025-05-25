@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Tuple, Type
+from typing import List, Dict, Optional, Type, Any
 import logging
 from pathlib import Path
 import traceback
@@ -188,6 +188,41 @@ class Database:
 
         except Exception as e:
             self._logger.error(f"Ошибка при удалении карточек из таблицы '{table_name}': {e}")
+            self._logger.debug(traceback.format_exc())
+            self.session.rollback()
+
+    def get_state(self, key: str) -> Optional[Any]:
+        """
+        Получает значение состояния по ключу.
+
+        :param key: строковый ключ состояния
+        :return: значение (dict / list / str / bool / int / float), если найдено; иначе None
+        """
+        try:
+            record = self.session.get(State, key)
+            return record.value if record else None
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка при получении состояния по ключу '{key}': {e}")
+            self._logger.debug(traceback.format_exc())
+            return None
+
+    def set_state(self, key: str, value) -> None:
+        """
+        Устанавливает или обновляет состояние по ключу.
+
+        :param key: строковый ключ
+        :param value: значение (должно быть сериализуемо в JSON)
+        """
+        try:
+            existing = self.session.get(State, key)
+            if existing:
+                existing.value = value
+            else:
+                self.session.add(State(key=key, value=value))
+            self.session.commit()
+            # self._logger.debug(f"Обновлено состояние: '{key}', с значениями {value}")
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка при установке состояния '{key}': {e}")
             self._logger.debug(traceback.format_exc())
             self.session.rollback()
 
