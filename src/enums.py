@@ -5,6 +5,8 @@ class ICON(StrEnum):
     ADD_CARD_24 = "add_card_24"
     EDIT_CARD_24 = "edit_card_24"
     DELETE_CARD_24 = "delete_card_24"
+    AUTO_SIZE_ON_24 = "auto_size_on_24"
+    AUTO_SIZE_OFF_24 = "auto_size_off_24"
 
     SONGS_LIST_24 = "songs_list_24"
     REPORT_LIST_24 = "report_list_24"
@@ -49,7 +51,7 @@ class DispatcherType(StrEnum):
 
 
 class GROUP(StrEnum):
-    SONG_TABLE = "songs"
+    SONGS_TABLE = "songs"
     REPORT_TABLE = "report"
 
 
@@ -94,11 +96,13 @@ class EventType:
                 EDIT_CARD = "VIEW.TABLE.PANEL.EDIT_CARD"
                 DELETE_CARD = "VIEW.TABLE.PANEL.DELETE_CARD"
                 SEARCH_VALUE = "VIEW.TABLE.PANEL.SEARCH_VALUE"
+                AUTO_SIZE = "VIEW.TABLE.PANEL.AUTO_SIZE"
 
             class DT:
                 EDIT_CARD = "VIEW.TABLE.DT.EDIT_CARD"
                 DELETE_CARDS = "VIEW.TABLE.DT.DELETE_CARDS"
                 SORT_CHANGED = "VIEW.TABLE.DT.SORT_CHANGED"
+                MANUAL_SIZE = "VIEW.TABLE.DT.MANUAL_SIZE"
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"

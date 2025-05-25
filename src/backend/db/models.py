@@ -20,8 +20,8 @@ class Report(Base):
     __tablename__ = 'report'
 
     id = Column(Integer, primary_key=True)
-    date = Column(Date, nullable=False)             # Дата
-    time = Column(Time, nullable=False)             # Время
+    date = Column(String, nullable=False)             # Дата
+    time = Column(String, nullable=False)             # Время
     artist = Column(String, nullable=False)         # Исполнитель
     title = Column(String, nullable=False)          # Название
     play_duration = Column(String, nullable=True)   # Длительность звучания
@@ -29,7 +29,7 @@ class Report(Base):
     composer = Column(String, nullable=True)        # Композитор
     lyricist = Column(String, nullable=True)        # Автор текста
     program_name = Column(String, nullable=True)    # Передача
-    play_count = Column(Integer, default=1)         # Количество исполнений
+    play_count = Column(String, default="1")         # Количество исполнений
     genre = Column(String, nullable=True)           # Жанр
     label = Column(String, nullable=True)           # Лейбл
 

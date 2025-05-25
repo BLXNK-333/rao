@@ -3,7 +3,7 @@ from .frontend.window import Window
 
 from .backend.db.settings import get_headers, DEFAULT_CARD_VALUES
 
-from .frontend.frames import Report, Export, Settings
+from .frontend.frames import SongsTable, Report, Export, Settings
 from .frontend.widgets import Terminal, Table, CardManager, TopMenu
 from .frontend.icons.icon_map import Icons, ICON
 from .frontend.style import UIStyles
@@ -30,7 +30,7 @@ def bootstrap():
     backend = BackendService()
     set_logging_config(queue=backend.msg_queue)
     all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
-    all_report_list = ...  # TODO: добавить логику формирования отчёта
+    all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
 
     # -------------------------------
     # UI initialization
@@ -43,15 +43,21 @@ def bootstrap():
     # -------------------------------
     # Main UI frames creation
     # -------------------------------
-    songs = Table(
+    songs = SongsTable(
         parent=window.content,
-        group_id=GROUP.SONG_TABLE,
+        group_id=GROUP.SONGS_TABLE,
         headers=get_headers(HEADER.SONGS),
         data=all_songs_list,
         stretchable_column_indices=[1, 2, 4, 5, 6]
     )
 
-    report = Report(parent=window.content)
+    report = Table(
+        parent=window.content,
+        group_id=GROUP.REPORT_TABLE,
+        headers=get_headers(HEADER.REPORT),
+        data=all_report_list,
+        stretchable_column_indices=[3, 4, 7, 8, 12]
+    )
     export = Export(parent=window.content)
     settings = Settings(parent=window.content)
 

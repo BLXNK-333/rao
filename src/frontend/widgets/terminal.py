@@ -144,9 +144,6 @@ class TermPanel(ttk.Frame):
 
     # endregion
 
-    def set_state(self, state: TERM):
-        self.active_state = state
-
 
 class TermLogger(ttk.Frame):
     # Размеры терминала (в строках)
