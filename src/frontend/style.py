@@ -10,6 +10,16 @@ class UIStyles(ttk.Style):
         self.configure_menu_style()
         self.configure_term_panel_style()
 
+        self.configure(
+            "CustomTooltip.TLabel",
+            background="#ededed",
+            foreground="#333333",
+            font=("Segoe UI", 9),
+            padding=(8, 4),
+            relief="flat",
+            borderwidth=1
+        )
+
     def configure_table_styles(self):
         """Настраивает стили для таблицы (Treeview)"""
         # Таблица

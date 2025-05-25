@@ -20,11 +20,14 @@ class DataTable(ttk.Frame):
         GROUP.REPORT_TABLE: STATE.REPORT_COL_SIZE
     }
 
-    def __init__(self, parent, group_id: GROUP):
+    # region Initialization and Subscriptions
+
+    def __init__(self, parent, group_id: GROUP, enable_tooltips=False):
         super().__init__(parent)
 
         self._group_id = group_id
         self._dt = None
+        self._enable_tooltips = enable_tooltips
         self._headers: List[str] = []
         self._stretchable_column_indices: Set[int] = set()
         self._table_len = 0
@@ -39,6 +42,11 @@ class DataTable(ttk.Frame):
         # где direction = 1 (▲), -1 (▼), 0 (нет)
         self._current_sort: Optional[Tuple[str, int]] = None
         self._sort_debounce_id = None
+
+        self._heading_tooltip = None
+        self._heading_tooltip_after_id = None
+        self._heading_tooltip_texts = {}  # {column_id: tooltip_text}
+        self._last_heading_col = ""
 
         self.subscribe()
 
@@ -61,12 +69,17 @@ class DataTable(ttk.Frame):
                 )
             )
 
+    # endregion
+
+    # region Table Creation and Setup
+
     def create_table(
             self,
             headers: List[str],
             data: Union[List[List[str]], ValuesView[List[str]]],
             stretchable_column_indices: List[int]
     ):
+        """Создание таблицы с заголовками и данными."""
         self._headers = headers
         self._stretchable_column_indices = set(stretchable_column_indices)
         self._table_len = len(data)
@@ -80,18 +93,13 @@ class DataTable(ttk.Frame):
         self._apply_bindings()
 
     def _setup_layout(self):
+        """Настройка сетки для виджета таблицы."""
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         self.grid(row=1, column=0, sticky="nsew")
 
-    def _apply_bindings(self):
-        self.dt.bind("<Return>", self._open_selected_row)
-        self.dt.bind("<Double-1>", self._open_selected_row)
-        self.dt.bind("<ButtonPress-1>", self._on_mouse_press)
-        self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
-        self.bind("<Configure>", self._resize_columns)
-
     def _create_dt(self):
+        """Создание ttk.Treeview и скроллбаров."""
         self.dt = ttk.Treeview(self, show="headings")
         self.dt.grid(row=0, column=0, sticky="nsew")
 
@@ -104,17 +112,35 @@ class DataTable(ttk.Frame):
         scroll_x.grid(row=1, column=0, sticky="ew")
 
     def _setup_styles(self):
+        """Настройка стилей для строк таблицы."""
         self.dt.tag_configure("oddrow", background="#f5f5f5")
         self.dt.tag_configure("evenrow", background="white")
 
     def _render_headers(self):
+        """Настройка заголовков колонок и их событий."""
         self.dt.config(columns=self._headers)
         for idx, col in enumerate(self._headers):
             self.dt.heading(col, text=col, command=partial(self._on_header_click, col))
             self.dt.column(col, anchor="w", width=100, stretch=False)
 
+    def _apply_bindings(self):
+        """Привязка событий к виджету таблицы."""
+        self.dt.bind("<Return>", self._open_selected_row)
+        self.dt.bind("<Double-1>", self._open_selected_row)
+        self.dt.bind("<ButtonPress-1>", self._on_mouse_press)
+        self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
+        self.bind("<Configure>", self._resize_columns)
+
+        if self._enable_tooltips:
+            print(f"{self._group_id}, Here we are")
+            self._bind_tooltip_events()
+
+    # endregion
+
+    # region Mouse Interaction and Sorting
+
     def _on_mouse_press(self, event):
-        # Сохраняем текущие ширины при нажатии мыши
+        """Обработка нажатия мыши: фиксируем старт изменения ширины колонки."""
         if self.dt.identify_region(event.x, event.y) == "separator":
             self._col_sep_pressed = True
             self._initial_column_widths = {
@@ -122,6 +148,7 @@ class DataTable(ttk.Frame):
             }
 
     def _on_mouse_release(self, event):
+        """Обработка отпускания мыши: фиксируем изменения ширины и публикуем событие."""
         # region = self.dt.identify_region(event.x, event.y)
         if not hasattr(self, '_initial_column_widths'):
             return
@@ -140,20 +167,8 @@ class DataTable(ttk.Frame):
                 self._publish_cols_state()
             self._resize_columns()
 
-    def _publish_cols_state(self, auto_size: bool = False):
-        state_name = self.size_states_map.get(self._group_id)
-        event_type = EventType.VIEW.TABLE.DT.AUTO_COL_SIZE \
-            if auto_size else EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE
-        EventBus.publish(
-            Event(
-                event_type=event_type,
-                group_id=self._group_id
-            ),
-            state_name, self.user_defined_widths
-        )
-
     def _on_header_click(self, column: str):
-        """Обрабатывает клик по заголовку колонки и обновляет стрелки сортировки."""
+        """Обработка клика по заголовку колонки, переключение сортировки."""
         prev_col, prev_dir = self._current_sort if self._current_sort else (None, 0)
 
         if column != prev_col:
@@ -186,6 +201,7 @@ class DataTable(ttk.Frame):
         self._sort_debounce_id = self.after(300, partial(self._debounced_sort_publish))
 
     def _debounced_sort_publish(self):
+        """Публикует событие сортировки с задержкой (дебаунс)."""
         self._sort_debounce_id = None
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED,
@@ -194,34 +210,26 @@ class DataTable(ttk.Frame):
         )
 
     def _get_sort_state(self) -> Tuple[int, str, int]:
-        """Возвращает (index, column_name, direction)."""
+        """Возвращает текущее состояние сортировки: (индекс, имя колонки, направление)."""
         if self._current_sort:
             col_name, direction = self._current_sort
             return self._headers.index(col_name), col_name, direction
         return -1, "", 0
 
+    # endregion
+
+    # region Column Width Management
+
     def _auto_size_widths(self):
+        """Сбрасывает пользовательские ширины и автоматически подгоняет колонки."""
         self.user_defined_widths.clear()
         self._adjust_column_widths()
         self._resize_columns()
         self._publish_cols_state(auto_size=True)
 
     def _adjust_column_widths(self):
-        # TODO:
-        #  + 1. Узкое место слишком тяжелый метод, нужно переделать логику.
-        #   Перенести вычисление в буфер таблицы и считать, написать там как-то, а сюда
-        #   отправлять событие с обновленными ширинами если нужно. Этот метод упростить
-        #   до сеттера, или избавиться.
-        #  - 2. Убрать лишние биндинги. Проверить метод _resize_columns, там 2 раза меняется
-        #   ширина, подумать как оптимизировать.
-        #  + 3. Добавить логику которая будет добавлять состояние ширин столбцов в таблицу
-        #   состояний в бд.
-        #  + 4. Понять почему не работает ресайз когда в таблице нет записей. Может должен по
-        #   заголовкам брать если пусто в размерах.
-        #  - 5. Эта логика все время делает одно и тоже, и это нужно кэшировать
-        #   (пока размеры считаются только на старте, и нет логики обновлений self.estimated_column_widths).
-        """Adjust column widths based on column header and first N rows (sample_size),
-        unless the user has manually set the width already."""
+        """Подгоняет ширину колонок по содержимому и заголовкам, если нет
+        пользовательских настроек."""
 
         font = tkFont.Font()
         padding = 0
@@ -236,6 +244,7 @@ class DataTable(ttk.Frame):
             self.dt.column(col, width=px_width, stretch=False)
 
     def _resize_columns(self, event=None):
+        """Изменяет ширины колонок с учётом растягиваемых колонок и доступного пространства."""
         if not self._headers or not self.user_defined_widths:
             return
 
@@ -249,24 +258,43 @@ class DataTable(ttk.Frame):
             if i in self._stretchable_column_indices
         ]
 
-        # Применяем базовые пользовательские ширины
+        # Вычисляем итоговые ширины для всех колонок
+        widths = {}
+        if stretchables and total_width > current_total:
+            extra = total_width - current_total
+            per_column_extra = extra // len(stretchables)
+        else:
+            per_column_extra = 0
+            stretchables = []
+
         for col in self._headers:
             base_width = self.user_defined_widths.get(col, 100)
-            self.dt.column(col, width=base_width, stretch=False)
+            final_width = base_width + per_column_extra if col in stretchables else base_width
+            widths[col] = (final_width, col in stretchables)
 
-        # Если нет stretchable колонок или нет лишнего места — ничего не растягиваем
-        if not stretchables or total_width <= current_total:
-            return
+        # Применяем ширины за один проход
+        for col, (width, stretch) in widths.items():
+            self.dt.column(col, width=width, stretch=stretch)
 
-        # Распределяем излишек ширины по растягиваемым колонкам
-        extra = total_width - current_total
-        per_column_extra = extra // len(stretchables)
+    def _publish_cols_state(self, auto_size: bool = False):
+        """Публикует событие изменения ширины колонок (ручное или авто)."""
+        state_name = self.size_states_map.get(self._group_id)
+        event_type = EventType.VIEW.TABLE.DT.AUTO_COL_SIZE \
+            if auto_size else EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE
+        EventBus.publish(
+            Event(
+                event_type=event_type,
+                group_id=self._group_id
+            ),
+            state_name, self.user_defined_widths
+        )
 
-        for col in stretchables:
-            base_width = self.user_defined_widths.get(col, 100)
-            self.dt.column(col, width=base_width + per_column_extra, stretch=True)
+    # endregion
+
+    # region Table Rows Management
 
     def _insert_row_to(self, row: List[str], index: int):
+        """Вставляет или обновляет строку в таблице по индексу."""
         card_id = row[0]
         if self.dt.exists(card_id):
             self.dt.delete(card_id)  # Удаляем старую строку
@@ -282,33 +310,39 @@ class DataTable(ttk.Frame):
         self.dt.see(card_id)
 
     def _delete_invisible_row(self, card_id: str):
+        """Удаляет строку по идентификатору, если она существует."""
         if self.dt.exists(card_id):
             self.dt.delete(card_id)
             self._table_len -= 1
         self._recolor_rows()
 
     def _fill_table(self, data: Union[List[List[str]], ValuesView[List[str]]]):
+        """Обновляет содержимое таблицы с отфильтрованными данными."""
         self.dt.delete(*self.dt.get_children())
         self._table_len = len(data)
         for index, row in enumerate(data):
             self._insert_row(row, index)
 
     def _insert_row(self, row: List[str], index: int = None):
+        """Вставляет строку в конец таблицы с заданным тегом (цветом) по индексу."""
         card_id = row[0]
         tag = self._get_tag(index)
         self.dt.insert("", "end", iid=card_id, values=row, tags=(tag,))
 
     def _get_tag(self, index: int | None) -> str:
+        """Обновляет цвет строк для зебры."""
         if index is None:
             index = self._table_len
         return "evenrow" if index % 2 == 0 else "oddrow"
 
     def _recolor_rows(self):
+        """Перекрашивает строки таблицы в зависимости от их индекса (чётная/нечётная)."""
         for index, iid in enumerate(self.dt.get_children()):
             tag = self._get_tag(index)
             self.dt.item(iid, tags=(tag,))
 
     def _open_selected_row(self, event=None):
+        """Обрабатывает открытие строки по Enter или двойному клику."""
         if event is not None:
             region = self.dt.identify_region(event.x, event.y)
             if region != "cell":
@@ -324,6 +358,7 @@ class DataTable(ttk.Frame):
             )
 
     def _delete_selected_rows(self):
+        """Удаляет выбранные строки."""
         selected_items = self.dt.selection()
         if not selected_items:
             return
@@ -351,8 +386,81 @@ class DataTable(ttk.Frame):
 
     def _filter_table(
             self, filtered: Union[List[List[str]], ValuesView[List[str]]]) -> None:
+        """Обновляет таблицу, показывая только отфильтрованные данные
+        и перекрашивает строки."""
         self._fill_table(filtered)
         self._recolor_rows()
+
+    # endregion
+
+    # start region HeaderTooltip
+    def _on_mouse_motion_header(self, event):
+        """Обработка движения мыши над заголовком, показ задержанного тултипа."""
+        region = self.dt.identify_region(event.x, event.y)
+        if region != "heading":
+            self._cancel_heading_tooltip()
+            return
+
+        col_id = self.dt.identify_column(event.x)
+        if not col_id or col_id == self._last_heading_col:
+            return
+
+        self._cancel_heading_tooltip()
+        self._last_heading_col = col_id
+
+        # задержка перед показом тултипа (в мс)
+        self._heading_tooltip_after_id = self.after(
+            500,
+            partial(self._show_heading_tooltip,
+                    col_id, event.x_root + 12, event.y_root + 10))
+
+    def _on_mouse_leave_header(self, _):
+        """Отмена тултипа при уходе мыши с заголовка."""
+        self._cancel_heading_tooltip()
+
+    def _cancel_heading_tooltip(self):
+        if self._heading_tooltip_after_id:
+            self.after_cancel(self._heading_tooltip_after_id)
+            self._heading_tooltip_after_id = None
+        self._hide_heading_tooltip()
+        self._last_heading_col = ""
+
+    def _show_heading_tooltip(self, col_id, x, y):
+        text = self._heading_tooltip_texts.get(col_id) or self.dt.heading(col_id).get(
+            "text", "")
+        self._hide_heading_tooltip()
+
+        self._heading_tooltip = tk.Toplevel(self)
+        self._heading_tooltip.wm_overrideredirect(True)
+        self._heading_tooltip.wm_geometry(f"+{x}+{y}")
+
+        # Можно добавить тень, эмулируя через рамку и цвет, но tkinter не поддерживает blur
+        frame = ttk.Frame(self._heading_tooltip, style="Tooltip.TFrame")
+        frame.pack()
+
+        label = ttk.Label(
+            frame,
+            text=text,
+            wraplength=400,
+            style="CustomTooltip.TLabel",
+            justify="left"
+        )
+        label.pack()
+
+    def _hide_heading_tooltip(self):
+        if self._heading_tooltip:
+            self._heading_tooltip.destroy()
+            self._heading_tooltip = None
+
+    def _bind_tooltip_events(self):
+        self.dt.bind("<Motion>", self._on_mouse_motion_header)
+        self.dt.bind("<Leave>", self._on_mouse_leave_header)
+
+    def _unbind_tooltip_events(self):
+        self.dt.unbind("<Motion>")
+        self.dt.unbind("<Leave>")
+
+    # endregion
 
 
 class TablePanel(ttk.Frame):
@@ -685,15 +793,23 @@ class Table(ttk.Frame):
             headers: List[str],
             data: List[List[str]],
             stretchable_column_indices: List[int],
-            prev_cols_state: Dict[str, int]
+            prev_cols_state: Dict[str, int],
+            enable_tooltips: bool
     ):
         super().__init__(parent)
         self._setup_layout()
 
         # Init
         self.group_id = group_id
-        self.table_panel = TablePanel(parent=self, group_id=group_id)
-        self.data_table = DataTable(parent=self, group_id=group_id)
+        self.table_panel = TablePanel(
+            parent=self,
+            group_id=group_id
+        )
+        self.data_table = DataTable(
+            parent=self,
+            group_id=group_id,
+            enable_tooltips=enable_tooltips
+        )
         self.buffer = TableBuffer(group_id=group_id)
 
         # Configure
