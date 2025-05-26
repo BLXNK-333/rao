@@ -46,7 +46,7 @@ class ExportSection(ttk.Frame):
 
     def create_path_row(self):
         # Строка выбора пути размещена ниже разделителя, row=2
-        ttk.Label(self, text="Save to:").grid(row=2, column=0, sticky="e", padx=(10, 15), pady=5)
+        ttk.Label(self, text="Сохранить в:").grid(row=2, column=0, sticky="e", padx=(10, 15), pady=5)
 
         container = ttk.Frame(self)
         container.grid(row=2, column=1, columnspan=3, sticky="ew", pady=5, padx=(0, 10))
@@ -63,8 +63,8 @@ class ExportSection(ttk.Frame):
         """
 
         # Метка слева от контейнера с комбобоксами
-        ttk.Label(self, text="Options:").grid(
-            row=3, column=0, sticky="e", padx=(5, 15), pady=(0, 10)
+        ttk.Label(self, text="Параметры:").grid(
+            row=3, column=0, sticky="e", padx=(7, 20), pady=(0, 10)
         )
 
         # Контейнер для комбобоксов, правее метки
@@ -89,7 +89,8 @@ class ExportSection(ttk.Frame):
             def remove_focus(event, widget=self):
                 widget.focus_set()
 
-            combobox.bind("<<ComboboxSelected>>", remove_focus)
+            combobox.bind("<FocusIn>", remove_focus)
+            combobox.bind("<FocusOut>", remove_focus)
 
     def create_export_buttons(self):
         """
@@ -119,7 +120,7 @@ class ExportSection(ttk.Frame):
             btn.pack(side="left", padx=(2, 0))
 
     def choose_path(self):
-        filename = filedialog.askdirectory(title="Select folder")
+        filename = filedialog.askdirectory(title="Выбор папки")
         if filename:
             self.variables["path"].set(filename)
 
@@ -151,7 +152,12 @@ class Export(ttk.Frame):
         now = datetime.datetime.now()
 
         # MONTHLY SECTION
-        months = [datetime.date(1900, m, 1).strftime('%B') for m in range(1, 13)]
+        # months = [datetime.date(1900, m, 1).strftime('%B') for m in range(1, 13)]
+        months = [
+            "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+        ]
+
         years = [str(y) for y in range(now.year - 10, now.year + 1)]
 
         month_vars = {
@@ -164,8 +170,8 @@ class Export(ttk.Frame):
 
         monthly_section = ExportSection(
             parent=container,
-            title="Monthly report export",
-            labels=[("Month:", "month"), ("Year:", "year")],
+            title="Экспорт ежемесячного отчёта",
+            labels=[("Месяц:", "month"), ("Год:", "year")],
             variables=month_vars,
             options={"month": months, "year": years},
             export_callback=self.export_monthly
@@ -173,7 +179,7 @@ class Export(ttk.Frame):
         monthly_section.grid(row=0, column=0, sticky="ew")
 
         # QUARTERLY SECTION
-        quarters = ["Q1", "Q2", "Q3", "Q4"]
+        quarters = ["1 квартал", "2 квартал", "3 квартал", "4 квартал"]
         quarter_vars = {
             "quarter": StringVar(),
             "year": StringVar(),
@@ -184,8 +190,8 @@ class Export(ttk.Frame):
 
         quarterly_section = ExportSection(
             parent=container,
-            title="Quarterly report export",
-            labels=[("Quarter:", "quarter"), ("Year:", "year")],
+            title="Экспорт квартального отчёта",
+            labels=[("Квартал:", "quarter"), ("Год:", "year")],
             variables=quarter_vars,
             options={"quarter": quarters, "year": years},
             export_callback=self.export_quarterly

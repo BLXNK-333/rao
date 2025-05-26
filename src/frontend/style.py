@@ -9,16 +9,7 @@ class UIStyles(ttk.Style):
         self.configure_card_styles()
         self.configure_menu_style()
         self.configure_term_panel_style()
-
-        self.configure(
-            "CustomTooltip.TLabel",
-            background="#ededed",
-            foreground="#333333",
-            font=("Segoe UI", 9),
-            padding=(8, 4),
-            relief="flat",
-            borderwidth=1
-        )
+        self.configure_tooltip_style()
 
     def configure_table_styles(self):
         """Настраивает стили для таблицы (Treeview)"""
@@ -65,3 +56,15 @@ class UIStyles(ttk.Style):
         self.configure("TermPanel.TFrame", background="#dbdbdb")
         self.configure("TermPanel.TLabel", background="#dbdbdb", foreground="black",
                         font=("Arial", 10))
+
+    def configure_tooltip_style(self):
+        """Настраивает стили подсказок заголовков таблицы."""
+        self.configure(
+            "CustomTooltip.TLabel",
+            background="#ededed",
+            foreground="#333333",
+            font=("Segoe UI", 9),
+            padding=(8, 4),
+            relief="flat",
+            borderwidth=1
+        )

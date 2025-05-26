@@ -363,7 +363,7 @@ class DataTable(ttk.Frame):
             return
 
         if not tk.messagebox.askyesno(
-                "Confirmation", "Operation requires confirmation."):
+                "Подтверждение", "Операция требует подтверждения."):
             return
 
         deleted_ids = []

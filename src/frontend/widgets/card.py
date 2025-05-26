@@ -115,11 +115,11 @@ class CardButtons(ttk.Frame):
         btn_frame = ttk.Frame(self)
         btn_frame.pack(anchor="center")
 
-        self.save_btn = ttk.Button(btn_frame, text="Save", command=self.editor.on_save)
+        self.save_btn = ttk.Button(btn_frame, text="Сохранить", command=self.editor.on_save)
         self.save_btn.pack(side="left", padx=5)
         self.save_btn.state(["disabled"])
 
-        self.cancel_btn = ttk.Button(btn_frame, text="Cancel", command=self.editor.on_close)
+        self.cancel_btn = ttk.Button(btn_frame, text="Отмена", command=self.editor.on_close)
         self.cancel_btn.pack(side="left", padx=5)
 
     def set_save_button_enabled(self, enabled: bool):
@@ -144,7 +144,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
             data: Dict[str, str]
     ):
         super().__init__(parent)
-        self.title("Edit card")
+        self.title("Редактировать карточку")
         self.geometry(self.geometry_map.get(HEADER(table)))
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.card_key = card_key

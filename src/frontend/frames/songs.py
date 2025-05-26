@@ -31,7 +31,7 @@ class SongsTable(Table):
         # Кнопка "В отчёт"
         btn_report = tk.Button(
             self.table_panel.container,
-            text="Add",
+            text="В отчет",
             bg="#4CAF50",  # зелёный фон
             fg="white",  # белый текст
             activebackground="#45a049",  # фон при наведении

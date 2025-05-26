@@ -39,6 +39,7 @@ def bootstrap():
     #   (пока размеры считаются только на старте, и нет логики обновлений self.estimated_column_widths).
     #  - 6. Написать виджет настроек. И добавить таблицу настроек в бд.
     #  - 7. Проверить функцию-ключ сортировки в буфере таблицы
+    #  - 8. Привести логи к одному унифицированному виду, и сделать на 1 языке (ru, тут будет)
 
     # -------------------------------
     # Backend initialization
@@ -104,10 +105,10 @@ def bootstrap():
     # -------------------------------
     # Menu tabs setup
     # -------------------------------
-    menu.add_tab("Songs", songs, image=icons[ICON.SONGS_LIST_24])
-    menu.add_tab("Report", report, image=icons[ICON.REPORT_LIST_24])
-    menu.add_tab("Export", export, image=icons[ICON.EXPORT_24])
-    menu.add_tab("Settings", settings, image=icons[ICON.SETTINGS_24])
+    menu.add_tab("Песни", songs, image=icons[ICON.SONGS_LIST_24])
+    menu.add_tab("Отчет", report, image=icons[ICON.REPORT_LIST_24])
+    menu.add_tab("Экспорт", export, image=icons[ICON.EXPORT_24])
+    menu.add_tab("Настройки", settings, image=icons[ICON.SETTINGS_24])
 
     # -------------------------------
     # Window initial layout
