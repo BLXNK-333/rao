@@ -183,6 +183,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
             Event(event_type=EventType.VIEW.CARD.SAVE),
             self.card_key, self.table, data
         )
+        self.on_close()
 
     def on_close(self):
         EventBus.publish(
@@ -239,7 +240,7 @@ class CardManager:
         card = self.opened_cards.pop(card_key)
         card.destroy()
 
-    def open_card(self, table: str, card_dict: Dict[str, str]):
+    def open_card(self, table: str, card_dict: Dict[str, str], unlock_save: bool = False):
         card_key = self.generate_card_key()
         headers = list(self.default_values.get(table).keys())
         data = card_dict if card_dict else copy.deepcopy(self.default_values.get(table))
@@ -252,6 +253,8 @@ class CardManager:
             data=data
         )
         self.opened_cards[card_key] = card
+        if unlock_save:
+            card.buttons.set_save_button_enabled(True)
 
     def generate_card_key(self, length=4, max_attempts=10) -> str:
         """

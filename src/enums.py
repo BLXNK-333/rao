@@ -115,6 +115,9 @@ class EventType:
                 CARD_UPDATED = "VIEW.TABLE.CARD_UPDATED"
                 INVISIBLE_ID = "VIEW.TABLE.INVISIBLE_ID"
 
+        class SONGS_TABLE:
+            ADD_TO_REPORT = "VIEW.SONGS_TABLE.ADD_TO_REPORT"
+
         class CARD:
             SAVE = "VIEW.CARD.SAVE"
             DESTROY = "VIEW.CARD.DESTROY"

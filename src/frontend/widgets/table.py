@@ -132,7 +132,6 @@ class DataTable(ttk.Frame):
         self.bind("<Configure>", self._resize_columns)
 
         if self._enable_tooltips:
-            print(f"{self._group_id}, Here we are")
             self._bind_tooltip_events()
 
     # endregion

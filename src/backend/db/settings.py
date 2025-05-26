@@ -11,8 +11,8 @@ DEFAULT_CARD_VALUES = {
         "Название": "",
         "Время": "",
         "Композитор": "",
-        "Автора текста": "",
-        "Лэйбл": "ZAO Zalupa Prod."
+        "Автор текста": "",
+        "Лэйбл": ""
     },
     HEADER.REPORT: {
         "ID": "",
@@ -39,7 +39,7 @@ FIELD_MAPS = {
         "Название": "title",
         "Время": "duration",
         "Композитор": "composer",
-        "Автора текста": "lyricist",
+        "Автор текста": "lyricist",
         "Лэйбл": "label"
     },
     HEADER.REPORT: {

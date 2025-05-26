@@ -35,9 +35,10 @@ def bootstrap():
     #   состояний в бд.
     #  + 4. Понять почему не работает ресайз когда в таблице нет записей. Может должен по
     #   заголовкам брать если пусто в размерах.
-    #  - 5. Эта логика все время делает одно и тоже, и это нужно кэшировать
+    #  - 5. Эта логика все время делает одно и тоже (_adjust_column_widths), и это нужно кэшировать
     #   (пока размеры считаются только на старте, и нет логики обновлений self.estimated_column_widths).
     #  - 6. Написать виджет настроек. И добавить таблицу настроек в бд.
+    #  - 7. Проверить функцию-ключ сортировки в буфере таблицы
 
     # -------------------------------
     # Backend initialization
@@ -67,7 +68,8 @@ def bootstrap():
         data=all_songs_list,
         stretchable_column_indices=[1, 2, 4, 5, 6],
         prev_cols_state=songs_table_cols_state,
-        enable_tooltips=False
+        enable_tooltips=False,
+        default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT]
     )
 
     report = Table(
