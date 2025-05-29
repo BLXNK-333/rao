@@ -7,6 +7,7 @@ class ICON(StrEnum):
     DELETE_CARD_24 = "delete_card_24"
     AUTO_SIZE_ON_24 = "auto_size_on_24"
     AUTO_SIZE_OFF_24 = "auto_size_off_24"
+    ERASER_24 = "eraser_24"
 
     SONGS_LIST_24 = "songs_list_24"
     REPORT_LIST_24 = "report_list_24"

@@ -250,6 +250,7 @@ class UndoEntry(ttk.Entry):
             self._redo_stack.append(self._undo_stack.pop())
             self._ignore = True
             self._var.set(self._undo_stack[-1])
+            self.icursor("end")
             self._ignore = False
             self._last_change_time = time.time()
         return "break"
@@ -264,6 +265,7 @@ class UndoEntry(ttk.Entry):
             self._undo_stack.append(value)
             self._ignore = True
             self._var.set(value)
+            self.icursor("end")
             self._ignore = False
             self._last_change_time = time.time()
         return "break"

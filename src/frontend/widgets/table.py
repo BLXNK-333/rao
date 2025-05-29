@@ -113,7 +113,7 @@ class DataTable(ttk.Frame):
 
     def _setup_styles(self):
         """Настройка стилей для строк таблицы."""
-        self.dt.tag_configure("oddrow", background="#f5f5f5")
+        self.dt.tag_configure("oddrow", background="#f0f0f0")
         self.dt.tag_configure("evenrow", background="white")
 
     def _render_headers(self):
@@ -472,6 +472,7 @@ class TablePanel(ttk.Frame):
         self._debounce_id = None
         self.buttons = {}
         self.icons = Icons()
+        self.search_entry = None
 
         # Основной контейнер строки поиска и кнопок
         self.container = ttk.Frame(self)
@@ -495,8 +496,14 @@ class TablePanel(ttk.Frame):
         )
 
     def _create_entry(self):
-        search_entry = UndoEntry(self.container, textvariable=self.search_var)
-        search_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
+        self.search_entry = UndoEntry(self.container, textvariable=self.search_var)
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
+
+    def _create_btn(self, container: ttk.Frame, icon: ICON, command):
+        btn = tk.Button(container, image=self.icons[icon], command=command,
+                        relief="flat", activebackground="#e7e7e7")
+        btn.pack(side="left", padx=2)
+        return btn
 
     def _create_buttons(self):
         """Создаёт кнопки справа от поля поиска"""
@@ -506,13 +513,11 @@ class TablePanel(ttk.Frame):
         icons = [
             (ICON.ADD_CARD_24, self.add_card),
             (ICON.EDIT_CARD_24, self.edit_card),
-            (ICON.DELETE_CARD_24, self.delete_card),
+            (ICON.DELETE_CARD_24, self.delete_card)
         ]
 
         for icon, command in icons:
-            btn = tk.Button(container, image=self.icons[icon], command=command,
-                            relief="flat", activebackground="#e7e7e7")
-            btn.pack(side="left", padx=2)
+            btn = self._create_btn(container, icon, command)
             self.buttons[icon] = btn
 
         auto_size_btn = ToggleButton(
@@ -527,6 +532,9 @@ class TablePanel(ttk.Frame):
         auto_size_btn.pack(side="left", padx=2)
         auto_size_btn.configure(state="disabled")
         self.buttons[ICON.AUTO_SIZE_ON_24] = auto_size_btn
+
+        clear_btn = self._create_btn(container, ICON.ERASER_24, self.clear_entry)
+        self.buttons[ICON.ERASER_24] = clear_btn
 
     def add_card(self):
         EventBus.publish(
@@ -547,6 +555,14 @@ class TablePanel(ttk.Frame):
                 event_type=EventType.VIEW.TABLE.PANEL.DELETE_CARD,
                 group_id=self._group_id)
         )
+
+    def _clear_entry(self):
+        if self.search_entry and self.search_entry._var.get():
+            self.search_entry._var.set("")
+            print("тут был")
+
+    def clear_entry(self):
+        self.after(0, partial(self._clear_entry))
 
     def _on_search(self, *args):
         term = self.search_var.get().lower()
@@ -793,7 +809,8 @@ class Table(ttk.Frame):
             data: List[List[str]],
             stretchable_column_indices: List[int],
             prev_cols_state: Dict[str, int],
-            enable_tooltips: bool
+            enable_tooltips: bool,
+            scroll_to_the_bottom: bool
     ):
         super().__init__(parent)
         self._setup_layout()
@@ -826,7 +843,10 @@ class Table(ttk.Frame):
         if self.data_table.user_defined_widths != prev_cols_state:
             self.table_panel.on_manual_size()
         self.data_table.user_defined_widths = prev_cols_state
-        
+
+        # Scroll to the table bottom
+        if scroll_to_the_bottom and data:
+            self.data_table.dt.see(data[-1][0])
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:

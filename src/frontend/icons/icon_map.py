@@ -14,6 +14,7 @@ class Icons:
         ICON.DELETE_CARD_24: "delete-24.png",
         ICON.AUTO_SIZE_ON_24: "double-arrow-on-24.png",
         ICON.AUTO_SIZE_OFF_24: "double-arrow-off-24.png",
+        ICON.ERASER_24: "eraser-24.png",
 
         ICON.SONGS_LIST_24: "list-music-24.png",
         ICON.REPORT_LIST_24: "checklist-task-budget-24.png",

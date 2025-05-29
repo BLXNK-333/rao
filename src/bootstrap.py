@@ -40,6 +40,7 @@ def bootstrap():
     #  - 6. Написать виджет настроек. И добавить таблицу настроек в бд.
     #  - 7. Проверить функцию-ключ сортировки в буфере таблицы
     #  - 8. Привести логи к одному унифицированному виду, и сделать на 1 языке (ru, тут будет)
+    #  - 9. Добавить bind на Del для удаления элементов из таблицы
 
     # -------------------------------
     # Backend initialization
@@ -70,7 +71,8 @@ def bootstrap():
         stretchable_column_indices=[1, 2, 4, 5, 6],
         prev_cols_state=songs_table_cols_state,
         enable_tooltips=False,
-        default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT]
+        default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
+        scroll_to_the_bottom=False
     )
 
     report = Table(
@@ -80,7 +82,8 @@ def bootstrap():
         data=all_report_list,
         stretchable_column_indices=[3, 4, 7, 8, 12],
         prev_cols_state=report_table_cols_state,
-        enable_tooltips=True
+        enable_tooltips=True,
+        scroll_to_the_bottom=True
     )
     export = Export(parent=window.content)
     settings = Settings(parent=window.content)
