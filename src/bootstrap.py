@@ -41,6 +41,7 @@ def bootstrap():
     #  - 7. Проверить функцию-ключ сортировки в буфере таблицы
     #  - 8. Привести логи к одному унифицированному виду, и сделать на 1 языке (ru, тут будет)
     #  - 9. Добавить bind на Del для удаления элементов из таблицы
+    #  - 10. Добавить логику проверки открытых карточек перед закрытием, сохранять или нет.
 
     # -------------------------------
     # Backend initialization
@@ -48,7 +49,7 @@ def bootstrap():
     backend = BackendService()
     set_logging_config(queue=backend.msg_queue)
     all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
-    all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
+    # all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
     songs_table_cols_state = backend.sync_db.get_state(STATE.SONGS_COL_SIZE)
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
 
@@ -75,16 +76,16 @@ def bootstrap():
         scroll_to_the_bottom=False
     )
 
-    report = Table(
-        parent=window.content,
-        group_id=GROUP.REPORT_TABLE,
-        headers=get_headers(HEADER.REPORT),
-        data=all_report_list,
-        stretchable_column_indices=[3, 4, 7, 8, 12],
-        prev_cols_state=report_table_cols_state,
-        enable_tooltips=True,
-        scroll_to_the_bottom=True
-    )
+    # report = Table(
+    #     parent=window.content,
+    #     group_id=GROUP.REPORT_TABLE,
+    #     headers=get_headers(HEADER.REPORT),
+    #     data=all_report_list,
+    #     stretchable_column_indices=[3, 4, 7, 8, 12],
+    #     prev_cols_state=report_table_cols_state,
+    #     enable_tooltips=True,
+    #     scroll_to_the_bottom=True
+    # )
     export = Export(parent=window.content)
     settings = Settings(parent=window.content)
 
@@ -109,7 +110,7 @@ def bootstrap():
     # Menu tabs setup
     # -------------------------------
     menu.add_tab("Песни", songs, image=icons[ICON.SONGS_LIST_24])
-    menu.add_tab("Отчет", report, image=icons[ICON.REPORT_LIST_24])
+    # menu.add_tab("Отчет", report, image=icons[ICON.REPORT_LIST_24])
     menu.add_tab("Экспорт", export, image=icons[ICON.EXPORT_24])
     menu.add_tab("Настройки", settings, image=icons[ICON.SETTINGS_24])
 

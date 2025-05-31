@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Date, Time
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -10,7 +10,7 @@ class Songs(Base):
     id = Column(Integer, primary_key=True)
     artist = Column(String, nullable=False)         # Исполнитель
     title = Column(String, nullable=False)          # Название
-    duration = Column(String, nullable=True)        # Время звучания (например, '5:36')
+    duration = Column(Time, nullable=True)        # Время звучания (например, '5:36')
     composer = Column(String, nullable=True)        # ФИО композитора
     lyricist = Column(String, nullable=True)        # ФИО автора текста
     label = Column(String, nullable=True)           # Лейбл
@@ -20,16 +20,16 @@ class Report(Base):
     __tablename__ = 'report'
 
     id = Column(Integer, primary_key=True)
-    date = Column(String, nullable=False)             # Дата
-    time = Column(String, nullable=False)             # Время
+    date = Column(Date, nullable=False)             # Дата
+    time = Column(Time, nullable=False)             # Время
     artist = Column(String, nullable=False)         # Исполнитель
     title = Column(String, nullable=False)          # Название
-    play_duration = Column(String, nullable=True)   # Длительность звучания
-    total_duration = Column(String, nullable=True)  # Общий хронометраж
+    play_duration = Column(Time, nullable=True)   # Длительность звучания
+    total_duration = Column(Time, nullable=True)  # Общий хронометраж
     composer = Column(String, nullable=True)        # Композитор
     lyricist = Column(String, nullable=True)        # Автор текста
     program_name = Column(String, nullable=True)    # Передача
-    play_count = Column(String, default="1")         # Количество исполнений
+    play_count = Column(Integer, default=1)         # Количество исполнений
     genre = Column(String, nullable=True)           # Жанр
     label = Column(String, nullable=True)           # Лейбл
 

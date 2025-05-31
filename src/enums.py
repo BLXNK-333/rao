@@ -84,6 +84,7 @@ class EventType:
             CARD_VALUES = "BACK.DB.CARD_VALUES"
             CARD_ID = "BACK.DB.CARD_ID"
             CARD_DICT = "BACK.DB.CARD_DICT"
+            REPORT = "BACK.DB.REPORT"
 
 
     class VIEW:
@@ -122,6 +123,9 @@ class EventType:
         class CARD:
             SAVE = "VIEW.CARD.SAVE"
             DESTROY = "VIEW.CARD.DESTROY"
+
+        class EXPORT:
+            GENERATE_REPORT = "VIEW.CARD.GENERATE_REPORT"
 
         class SETTINGS:
             class CLICK:

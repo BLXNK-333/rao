@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 
 from .database import Database
 from .settings import (
@@ -9,6 +9,7 @@ from .settings import (
 )
 from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE
 from ...eventbus import Event, Subscriber, EventBus
+from ...entities import MonthReport, QuarterReport
 
 
 class SyncDB:
@@ -39,8 +40,18 @@ class SyncDB:
         remapped_rows = convert_all_rows(table_name, all_rows)
         return remapped_rows
 
-    def get_report(self):
-        pass
+    def get_report(self, report: Union[MonthReport, QuarterReport]):
+        if isinstance(report, MonthReport):
+            report.data = self.db.get_month_report(report.month, report.year)
+        elif isinstance(report, QuarterReport):
+            report.data = self.db.get_quarter_report(report.quarter, report.year)
+        else:
+            pass
+
+        EventBus.publish(
+            Event(event_type=EventType.BACK.DB.REPORT),
+            report
+        )
 
     def get_card(self, table_name: str, card_id: str):
         db_row = self.db.get_card(table_name, card_id)

@@ -559,7 +559,6 @@ class TablePanel(ttk.Frame):
     def _clear_entry(self):
         if self.search_entry and self.search_entry._var.get():
             self.search_entry._var.set("")
-            print("тут был")
 
     def clear_entry(self):
         self.after(0, partial(self._clear_entry))

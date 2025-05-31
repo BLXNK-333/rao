@@ -8,6 +8,7 @@ import tkinter as tk
 
 from ..widgets import ScrolledFrame, UndoEntry
 from ..icons.icon_map import Icons
+from ...entities import MonthReport, QuarterReport
 
 
 class ExportSection(ttk.Frame):
@@ -126,6 +127,11 @@ class ExportSection(ttk.Frame):
 
 
 class Export(ttk.Frame):
+    MONTHS = [
+            "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+        ]
+
     def __init__(self, parent: ttk.Frame):
         super().__init__(parent)
         self.configure_grid()
@@ -152,20 +158,14 @@ class Export(ttk.Frame):
         now = datetime.datetime.now()
 
         # MONTHLY SECTION
-        # months = [datetime.date(1900, m, 1).strftime('%B') for m in range(1, 13)]
-        months = [
-            "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-            "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
-        ]
-
-        years = [str(y) for y in range(now.year - 10, now.year + 1)]
+        years = [str(y) for y in range(2022, now.year + 1)]
 
         month_vars = {
             "month": StringVar(),
             "year": StringVar(),
             "path": StringVar()
         }
-        month_vars["month"].set(months[now.month - 1])
+        month_vars["month"].set(self.MONTHS[now.month - 1])
         month_vars["year"].set(str(now.year))
 
         monthly_section = ExportSection(
@@ -173,7 +173,7 @@ class Export(ttk.Frame):
             title="Экспорт ежемесячного отчёта",
             labels=[("Месяц:", "month"), ("Год:", "year")],
             variables=month_vars,
-            options={"month": months, "year": years},
+            options={"month": self.MONTHS, "year": years},
             export_callback=self.export_monthly
         )
         monthly_section.grid(row=0, column=0, sticky="ew")
@@ -199,11 +199,39 @@ class Export(ttk.Frame):
         quarterly_section.grid(row=1, column=0, sticky="ew", pady=(20, 0))
 
     def export_monthly(self, fmt: str, vars: dict):
-        self._logger.info(f"[MONTHLY] Export {vars['month'].get()} {vars['year'].get()} "
-                          f"to {vars['path'].get()} as {fmt}")
-        # TODO: implement export logic
+        month_name = vars["month"].get()
+        year_str = vars["year"].get()
+        path = vars["path"].get()
+
+        # Преобразование месяца из строки в номер (1–12)
+        try:
+            month_index = self.MONTHS.index(month_name) + 1
+        except ValueError:
+            self._logger.error(f"[MONTHLY] Invalid month: {month_name}")
+            return
+
+        export_report = MonthReport(
+            month=month_index, year=int(year_str),
+            file_format=fmt, save_path=path, data=[]
+        )
+
+        self._logger.info(f"[MONTHLY] Export parameters: {export_report}")
 
     def export_quarterly(self, fmt: str, vars: dict):
-        self._logger.info(f"[QUARTERLY] Export {vars['quarter'].get()} {vars['year'].get()} "
-                          f"to {vars['path'].get()} as {fmt}")
-        # TODO: implement export logic
+        quarter_str = vars["quarter"].get()
+        year_str = vars["year"].get()
+        path = vars["path"].get()
+
+        # Преобразование квартала "1 квартал" → 1
+        try:
+            quarter_index = int(quarter_str[0])
+        except (ValueError, IndexError):
+            self._logger.error(f"[QUARTERLY] Invalid quarter: {quarter_str}")
+            return
+
+        export_report = QuarterReport(
+            quarter=quarter_index, year=int(year_str),
+            file_format=fmt, save_path=path, data=[]
+        )
+
+        self._logger.info(f"[QUARTERLY] Export parameters: {export_report}")
