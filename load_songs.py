@@ -45,7 +45,7 @@ def load_songs(csv_path: Path) -> None:
                 artist, title, duration_str, composer, lyricist, label = [
                     p.strip() or None for p in parts]
                 duration = normalize_duration(duration_str)
-                row_key = (artist, title)
+                row_key = (artist, title, duration_str, composer, lyricist, label)
 
                 if row_key in seen:
                     continue

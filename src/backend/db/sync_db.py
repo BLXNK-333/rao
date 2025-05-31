@@ -1,12 +1,7 @@
 from typing import Dict, List, Any, Union
 
 from .database import Database
-from .settings import (
-    get_headers,
-    map_ui_to_model_fields,
-    map_db_rows_to_view_order,
-    convert_all_rows
-)
+from .adapter import TableAdapter
 from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE
 from ...eventbus import Event, Subscriber, EventBus
 from ...entities import MonthReport, QuarterReport
@@ -15,6 +10,13 @@ from ...entities import MonthReport, QuarterReport
 class SyncDB:
     def __init__(self):
         self.db = Database()
+
+        _song_adapter = TableAdapter(HEADER.SONGS)
+        _report_adapter = TableAdapter(HEADER.REPORT)
+        self.adapters: Dict[str, TableAdapter] = {
+            HEADER.SONGS: _song_adapter,
+            HEADER.REPORT: _report_adapter
+        }
         self.subscribe()
 
     def subscribe(self):
@@ -37,7 +39,8 @@ class SyncDB:
 
     def get_all_rows(self, table_name: str):
         all_rows = self.db.get_all_rows(table_name)
-        remapped_rows = convert_all_rows(table_name, all_rows)
+        adapter = self.adapters.get(table_name)
+        remapped_rows = adapter.to_table(all_rows)
         return remapped_rows
 
     def get_report(self, report: Union[MonthReport, QuarterReport]):
@@ -55,7 +58,8 @@ class SyncDB:
 
     def get_card(self, table_name: str, card_id: str):
         db_row = self.db.get_card(table_name, card_id)
-        remapped_row = map_db_rows_to_view_order(table_name, db_row)
+        adapter = self.adapters.get(table_name)
+        remapped_row = adapter.to_view(db_row)
         EventBus.publish(
             Event(event_type=EventType.BACK.DB.CARD_DICT),
             table_name, remapped_row
@@ -63,7 +67,8 @@ class SyncDB:
 
     def save_card(self, card_key: str, table_name: str, data: Dict[str, str]):
         card_id = data.get("ID")
-        remapped_data = map_ui_to_model_fields(table_name=HEADER(table_name), data=data)
+        adapter = self.adapters.get(table_name)
+        remapped_data = adapter.to_db(data)
 
         if card_id:
             self.db.update_card(card_id=card_id, table_name=table_name, payload=remapped_data)
@@ -84,13 +89,15 @@ class SyncDB:
         state = self.db.get_state(state_name)
         if state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
             table_name = HEADER(state_name.value.split("_")[0])
-            state = map_db_rows_to_view_order(table_name=HEADER(table_name), data=state)
+            adapter = self.adapters.get(table_name)
+            state = adapter.to_view(db_row=state, transform=False)
         return state
 
     def set_state(self, state_name: STATE, data: Any):
         if state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
             table_name = HEADER(state_name.value.split("_")[0])
-            data = map_ui_to_model_fields(data=data, table_name=HEADER(table_name))
+            adapter = self.adapters.get(table_name)
+            data = adapter.to_db(ui_row=data, transform=False)
         self.db.set_state(str(state_name.value), data)
 
     def close_connection(self):

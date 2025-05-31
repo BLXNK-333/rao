@@ -1,3 +1,5 @@
+# Это временный модуль , потом будет удален
+
 from typing import List
 import calendar
 
