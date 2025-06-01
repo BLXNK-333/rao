@@ -86,6 +86,9 @@ class EventType:
             CARD_DICT = "BACK.DB.CARD_DICT"
             REPORT = "BACK.DB.REPORT"
 
+        class EXPORT:
+            NO_DATA = "BACK.EXPORT.NO_DATA"
+
 
     class VIEW:
         # View signals

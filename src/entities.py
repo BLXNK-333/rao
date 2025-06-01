@@ -1,5 +1,5 @@
+from typing import List, Any
 from dataclasses import dataclass
-from typing import List
 from pathlib import Path
 
 
@@ -8,7 +8,7 @@ class BaseReport:
     year: int
     file_format: str  # "xlsx", "xls", "csv"
     save_path: str  # каталог, куда сохраняем
-    data: List[List[str]]
+    data: List[List[Any]]
 
     def __post_init__(self):
         # Автоматическая генерация полного пути
@@ -28,7 +28,7 @@ class MonthReport(BaseReport):
             year: int,
             file_format: str,
             save_path: str,
-            data: List[List[str]]
+            data: List[List[Any]]
     ):
         self.month = month
         super().__init__(year=year, file_format=file_format, save_path=save_path, data=data)
@@ -51,7 +51,7 @@ class QuarterReport(BaseReport):
             year: int,
             file_format: str,
             save_path: str,
-            data: List[List[str]]
+            data: List[List[Any]]
     ):
         self.quarter = quarter
         super().__init__(year=year, file_format=file_format, save_path=save_path, data=data)

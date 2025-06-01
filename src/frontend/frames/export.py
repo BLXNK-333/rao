@@ -5,10 +5,13 @@ import datetime
 
 from tkinter import ttk, StringVar, filedialog
 import tkinter as tk
+import tkinter.messagebox as messagebox
 
 from ..widgets import ScrolledFrame, UndoEntry
 from ..icons.icon_map import Icons
 from ...entities import MonthReport, QuarterReport
+from ...eventbus import EventBus, Event, Subscriber
+from ...enums import EventType, DispatcherType
 
 
 class ExportSection(ttk.Frame):
@@ -147,10 +150,23 @@ class Export(ttk.Frame):
 
         self.build_exports()
         self.scrolled.bind_scroll_events(self)
+        self.subscribe()
+
+    def subscribe(self):
+        EventBus.subscribe(
+            EventType.BACK.EXPORT.NO_DATA,
+            Subscriber(callback=self._no_data_handler, route_by=DispatcherType.TK)
+        )
 
     def configure_grid(self):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
+
+    def _no_data_handler(self, message: str):
+        messagebox.showinfo(
+            title="Нет данных",
+            message=message or "Данных за указанный период пока нет."
+        )
 
     def build_exports(self):
         container = self.scrolled.content
@@ -215,7 +231,10 @@ class Export(ttk.Frame):
             file_format=fmt, save_path=path, data=[]
         )
 
-        self._logger.info(f"[MONTHLY] Export parameters: {export_report}")
+        EventBus.publish(Event(
+            event_type=EventType.VIEW.EXPORT.GENERATE_REPORT
+        ), export_report
+        )
 
     def export_quarterly(self, fmt: str, vars: dict):
         quarter_str = vars["quarter"].get()
@@ -234,4 +253,7 @@ class Export(ttk.Frame):
             file_format=fmt, save_path=path, data=[]
         )
 
-        self._logger.info(f"[QUARTERLY] Export parameters: {export_report}")
+        EventBus.publish(Event(
+            event_type=EventType.VIEW.EXPORT.GENERATE_REPORT
+        ), export_report
+        )

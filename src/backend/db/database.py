@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional, Type, Any
 import logging
+import datetime
 from pathlib import Path
 import traceback
 
@@ -60,11 +61,69 @@ class Database:
             self._logger.debug(traceback.format_exc())
             return []
 
-    def get_month_report(self, month: int, year: int):
-        pass
+    def get_month_report(self, month: int, year: int) -> List[Dict[str, Any]]:
+        try:
+            start_date = datetime.date(year, month, 1)
+            # Конец месяца: если декабрь — следующий январь, иначе следующий месяц
+            if month == 12:
+                end_date = datetime.date(year + 1, 1, 1)
+            else:
+                end_date = datetime.date(year, month + 1, 1)
 
-    def get_quarter_report(self, quarter: int, year: int):
-        pass
+            query = (
+                self.session.query(Report)
+                .filter(Report.date >= start_date, Report.date < end_date)
+                .all()
+            )
+
+            rows = []
+            for record in query:
+                row_dict = {}
+                for col in Report.__table__.columns:
+                    value = getattr(record, col.name)
+                    row_dict[col.name] = value
+                rows.append(row_dict)
+            return rows
+
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка в get_month_report({month=}, {year=}): {e}")
+            self._logger.debug(traceback.format_exc())
+            return []
+
+    def get_quarter_report(self, quarter: int, year: int) -> List[Dict[str, Any]]:
+        try:
+            if quarter not in (1, 2, 3, 4):
+                self._logger.error(f"Некорректный номер квартала: {quarter}")
+                return []
+
+            month_start = (quarter - 1) * 3 + 1
+            start_date = datetime.date(year, month_start, 1)
+
+            # начало следующего квартала
+            if quarter == 4:
+                end_date = datetime.date(year + 1, 1, 1)
+            else:
+                end_date = datetime.date(year, month_start + 3, 1)
+
+            query = (
+                self.session.query(Report)
+                .filter(Report.date >= start_date, Report.date < end_date)
+                .all()
+            )
+
+            rows = []
+            for record in query:
+                row_dict = {}
+                for col in Report.__table__.columns:
+                    value = getattr(record, col.name)
+                    row_dict[col.name] = value
+                rows.append(row_dict)
+            return rows
+
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка в get_quarter_report({quarter=}, {year=}): {e}")
+            self._logger.debug(traceback.format_exc())
+            return []
 
     def get_card(self, table_name: str, card_id: str) -> Optional[Dict[str, str]]:
         """

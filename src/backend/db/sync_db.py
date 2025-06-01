@@ -27,6 +27,7 @@ class SyncDB:
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.delete_card),
             (EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE, self.set_state),
             (EventType.VIEW.TABLE.DT.AUTO_COL_SIZE, self.set_state),
+            (EventType.VIEW.EXPORT.GENERATE_REPORT, self.get_report)
         ]
 
         for event, handler in handlers:
@@ -44,10 +45,13 @@ class SyncDB:
         return remapped_rows
 
     def get_report(self, report: Union[MonthReport, QuarterReport]):
+        adapter = self.adapters.get(HEADER.REPORT)
         if isinstance(report, MonthReport):
-            report.data = self.db.get_month_report(report.month, report.year)
+            db_rows = self.db.get_month_report(report.month, report.year)
+            report.data = adapter.to_month_report(db_rows)
         elif isinstance(report, QuarterReport):
-            report.data = self.db.get_quarter_report(report.quarter, report.year)
+            db_rows = self.db.get_quarter_report(report.quarter, report.year)
+            report.data = adapter.to_quarter_report(db_rows)
         else:
             pass
 

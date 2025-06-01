@@ -8,8 +8,6 @@ from ...enums import HEADER
 from .models import Songs, Report, Base
 
 
-
-
 class TableAdapter:
     MODEL_MAP: Dict[str, Type[Base]] = {
         HEADER.SONGS: Songs,
@@ -109,3 +107,31 @@ class TableAdapter:
 
     def _ui_headers(self) -> List[str]:
         return list(DEFAULT_CARD_VALUES[self.header].keys())
+
+    def _to_report(self, db_rows: List[Dict[str, Any]], column_order: List[str]) -> List[
+        List[Any]]:
+        """
+        Преобразует строки из БД в табличный формат по заданному порядку колонок.
+        Поддерживает спец. колонку 'datetime' = объединение 'date' и 'time' в datetime.datetime.
+        """
+        result = []
+        for row in db_rows:
+            line = []
+            for col in column_order:
+                if col == "datetime":
+                    date_val = row.get("date")
+                    time_val = row.get("time")
+                    line.append(datetime.combine(date_val, time_val))
+                else:
+                    line.append(row.get(col))
+            result.append(line)
+        return result
+
+    def to_month_report(self, db_rows: List[Dict[str, Any]]) -> List[List[str]]:
+        order = ["title", "composer", "lyricist", "play_count", "artist", "label"]
+        return self._to_report(db_rows, order)
+
+    def to_quarter_report(self, db_rows: List[Dict[str, Any]]) -> List[List[str]]:
+        order = ["program_name", "datetime", "title", "composer", "lyricist",
+                 "play_duration", "play_count", "total_duration", "genre", "artist"]
+        return self._to_report(db_rows, order)
