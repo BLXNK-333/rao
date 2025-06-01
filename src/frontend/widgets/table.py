@@ -120,7 +120,7 @@ class DataTable(ttk.Frame):
         """Настройка заголовков колонок и их событий."""
         self.dt.config(columns=self._headers)
         for idx, col in enumerate(self._headers):
-            self.dt.heading(col, text=col, command=partial(self._on_header_click, col))
+            self.dt.heading(col, text=col, command=partial(self.on_header_click, col))
             self.dt.column(col, anchor="w", width=100, stretch=False)
 
     def _apply_bindings(self):
@@ -165,6 +165,10 @@ class DataTable(ttk.Frame):
             if is_changed:
                 self._publish_cols_state()
             self._resize_columns()
+
+    def on_header_click(self, column: str):
+        """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""
+        self.after(0, partial(self._on_header_click, column))
 
     def _on_header_click(self, column: str):
         """Обработка клика по заголовку колонки, переключение сортировки."""
