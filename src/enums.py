@@ -64,6 +64,8 @@ class HEADER(StrEnum):
 class STATE(StrEnum):
     SONGS_COL_SIZE = "songs_col_size"
     REPORT_COL_SIZE = "report_col_size"
+    MONTHLY_PATH = "monthly_path"
+    QUARTERLY_PATH = "quarterly_path"
 
 
 class EventType:
@@ -87,7 +89,7 @@ class EventType:
             REPORT = "BACK.DB.REPORT"
 
         class EXPORT:
-            NO_DATA = "BACK.EXPORT.NO_DATA"
+            MESSAGE = "BACK.EXPORT.MESSAGE"
 
 
     class VIEW:
@@ -129,6 +131,7 @@ class EventType:
 
         class EXPORT:
             GENERATE_REPORT = "VIEW.CARD.GENERATE_REPORT"
+            PATH_CHANGED = "VIEW.CARD.PATH_CHANGED"
 
         class SETTINGS:
             class CLICK:

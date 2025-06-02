@@ -27,6 +27,7 @@ class SyncDB:
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.delete_card),
             (EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE, self.set_state),
             (EventType.VIEW.TABLE.DT.AUTO_COL_SIZE, self.set_state),
+            (EventType.VIEW.EXPORT.PATH_CHANGED, self.set_state),
             (EventType.VIEW.EXPORT.GENERATE_REPORT, self.get_report)
         ]
 

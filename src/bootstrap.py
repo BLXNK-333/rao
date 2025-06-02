@@ -50,6 +50,14 @@ def bootstrap():
     #  - 13. Написать скрипт для легкого экспорта из excel файлов и добавления в базу.
     #  - 14. Установить ВМ с Windows 7 и адаптировать под версию python 3.8.xx, проверить
     #  какие зависимости потребует, и написать док как установить на шиндоус.
+    #  - 15. Исправить баг с форматом в экспортируемом отчете, сейчас там где "play_count",
+    #  текст, должно быть число.
+    #  - 16. Нужно чтобы у отчетов был консистентный вид, поэтому перед записью в файл,
+    #  нужно отсортировать таблицу, которая приходит в builder, по колонке "datetime",
+    #  такая появляется после выхода с адаптера. (и возможно по id но он не передается,
+    #  поэтому не факт что это нужно)
+    #  - 17. Нужно сохранять состояние сортировки из таблиц, и передавать в базу
+    #  при обновлении. На старте соответственно применять сортировку.
 
     # -------------------------------
     # Backend initialization
@@ -58,8 +66,11 @@ def bootstrap():
     set_logging_config(queue=backend.msg_queue)
     all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
     all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
+
     songs_table_cols_state = backend.sync_db.get_state(STATE.SONGS_COL_SIZE)
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
+    monthly_path_state = backend.sync_db.get_state(STATE.MONTHLY_PATH)
+    quarterly_path_state = backend.sync_db.get_state(STATE.QUARTERLY_PATH)
 
     # -------------------------------
     # UI initialization
@@ -94,7 +105,11 @@ def bootstrap():
         enable_tooltips=True,
         scroll_to_the_bottom=True
     )
-    export = Export(parent=window.content)
+    export = Export(
+        parent=window.content,
+        monthly_path=monthly_path_state,
+        quarterly_path=quarterly_path_state
+    )
     settings = Settings(parent=window.content)
 
     card_manager = CardManager(parent=window.content)

@@ -127,11 +127,11 @@ class TableAdapter:
             result.append(line)
         return result
 
-    def to_month_report(self, db_rows: List[Dict[str, Any]]) -> List[List[str]]:
+    def to_month_report(self, db_rows: List[Dict[str, Any]]) -> List[List[Any]]:
         order = ["title", "composer", "lyricist", "play_count", "artist", "label"]
         return self._to_report(db_rows, order)
 
-    def to_quarter_report(self, db_rows: List[Dict[str, Any]]) -> List[List[str]]:
+    def to_quarter_report(self, db_rows: List[Dict[str, Any]]) -> List[List[Any]]:
         order = ["program_name", "datetime", "title", "composer", "lyricist",
                  "play_duration", "play_count", "total_duration", "genre", "artist"]
         return self._to_report(db_rows, order)

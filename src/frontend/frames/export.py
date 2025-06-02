@@ -11,7 +11,7 @@ from ..widgets import ScrolledFrame, UndoEntry
 from ..icons.icon_map import Icons
 from ...entities import MonthReport, QuarterReport
 from ...eventbus import EventBus, Event, Subscriber
-from ...enums import EventType, DispatcherType
+from ...enums import EventType, DispatcherType, STATE
 
 
 class ExportSection(ttk.Frame):
@@ -22,21 +22,25 @@ class ExportSection(ttk.Frame):
             labels: List[Tuple[str, str]],
             variables: Dict[str, StringVar],
             options: Dict[str, List[str]],
-            export_callback
+            export_callback,
+            state_key: STATE
     ):
         super().__init__(parent)
         self.variables = variables
         self.options = options
         self.export_callback = export_callback
+        self.state_key = state_key
+        self._last_path_value = self.variables["path"].get()
+        self._debounce_after_id = None
         self.icons = Icons()
 
-        # Настройка сетки
         self.columnconfigure(1, weight=1)
 
-        self.create_header(title)          # Заголовок + разделитель
-        self.create_path_row()             # Строка выбора пути (Entry + кнопка)
+        self.create_header(title)
+        self.create_path_row()
         self.create_fields(labels)
         self.create_export_buttons()
+        self._setup_path_trace()
 
     def create_header(self, title: str):
         ttk.Label(
@@ -105,7 +109,6 @@ class ExportSection(ttk.Frame):
 
         formats = [
             ("xlsx", "#388E3C", "#2E7D32"),
-            ("xls", "#388E3C", "#2E7D32"),
             ("csv", "#424242", "#616161")
         ]
 
@@ -124,9 +127,29 @@ class ExportSection(ttk.Frame):
             btn.pack(side="left", padx=(2, 0))
 
     def choose_path(self):
-        filename = filedialog.askdirectory(title="Выбор папки")
+        current_path = self.variables["path"].get()
+        filename = filedialog.askdirectory(
+            title="Выбор папки",
+            initialdir=current_path if current_path else None
+        )
         if filename:
             self.variables["path"].set(filename)
+
+    def _setup_path_trace(self):
+        self.variables["path"].trace_add("write", self._debounced_path_change)
+
+    def _debounced_path_change(self, *_):
+        if self._debounce_after_id:
+            self.after_cancel(self._debounce_after_id)
+        self._debounce_after_id = self.after(500, partial(self._publish_path_change))
+
+    def _publish_path_change(self):
+        current = self.variables["path"].get()
+        if current != self._last_path_value:
+            self._last_path_value = current
+            EventBus.publish(Event(
+                event_type=EventType.VIEW.EXPORT.PATH_CHANGED
+            ), self.state_key, current)
 
 
 class Export(ttk.Frame):
@@ -135,10 +158,17 @@ class Export(ttk.Frame):
             "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
         ]
 
-    def __init__(self, parent: ttk.Frame):
+    def __init__(
+            self,
+            parent: ttk.Frame,
+            monthly_path: str = "",
+            quarterly_path: str = ""
+    ):
         super().__init__(parent)
         self.configure_grid()
         self._logger = logging.getLogger(__name__)
+        self._monthly_path = monthly_path
+        self._quarterly_path = quarterly_path
 
         self.inner = ttk.Frame(self)
         self.inner.grid(row=0, column=0, sticky="nsew")
@@ -154,19 +184,16 @@ class Export(ttk.Frame):
 
     def subscribe(self):
         EventBus.subscribe(
-            EventType.BACK.EXPORT.NO_DATA,
-            Subscriber(callback=self._no_data_handler, route_by=DispatcherType.TK)
+            EventType.BACK.EXPORT.MESSAGE,
+            Subscriber(callback=self._export_message_handler, route_by=DispatcherType.TK)
         )
 
     def configure_grid(self):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
-    def _no_data_handler(self, message: str):
-        messagebox.showinfo(
-            title="Нет данных",
-            message=message or "Данных за указанный период пока нет."
-        )
+    def _export_message_handler(self, message: str):
+        messagebox.showinfo(title="Уведомление", message=message)
 
     def build_exports(self):
         container = self.scrolled.content
@@ -179,7 +206,7 @@ class Export(ttk.Frame):
         month_vars = {
             "month": StringVar(),
             "year": StringVar(),
-            "path": StringVar()
+            "path": StringVar(value=self._monthly_path)
         }
         month_vars["month"].set(self.MONTHS[now.month - 1])
         month_vars["year"].set(str(now.year))
@@ -190,7 +217,8 @@ class Export(ttk.Frame):
             labels=[("Месяц:", "month"), ("Год:", "year")],
             variables=month_vars,
             options={"month": self.MONTHS, "year": years},
-            export_callback=self.export_monthly
+            export_callback=self.export_monthly,
+            state_key=STATE.MONTHLY_PATH
         )
         monthly_section.grid(row=0, column=0, sticky="ew")
 
@@ -199,7 +227,7 @@ class Export(ttk.Frame):
         quarter_vars = {
             "quarter": StringVar(),
             "year": StringVar(),
-            "path": StringVar()
+            "path": StringVar(value=self._quarterly_path)
         }
         quarter_vars["quarter"].set(quarters[(now.month - 1) // 3])
         quarter_vars["year"].set(str(now.year))
@@ -210,7 +238,8 @@ class Export(ttk.Frame):
             labels=[("Квартал:", "quarter"), ("Год:", "year")],
             variables=quarter_vars,
             options={"quarter": quarters, "year": years},
-            export_callback=self.export_quarterly
+            export_callback=self.export_quarterly,
+            state_key=STATE.QUARTERLY_PATH
         )
         quarterly_section.grid(row=1, column=0, sticky="ew", pady=(20, 0))
 

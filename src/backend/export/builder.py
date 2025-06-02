@@ -1,5 +1,6 @@
-import logging
 from typing import Union
+import logging
+from pathlib import Path
 
 from ...entities import MonthReport, QuarterReport
 from ...eventbus import EventBus, Event, Subscriber
@@ -30,9 +31,15 @@ class ReportBuilder:
         "Исполнитель"
     ]
 
+    RU_MONTHS_GEN = {
+        1: "январь", 2: "февраль", 3: "март", 4: "апрель",
+        5: "май", 6: "июнь", 7: "июль", 8: "август",
+        9: "сентябрь", 10: "октябрь", 11: "ноябрь", 12: "декабрь"
+    }
+
     def __init__(self):
         self._logger = logging.getLogger(__name__)
-        self._formats = ('xlsx', 'xls', 'csv')
+        self._formats = ('xlsx', 'csv')
         self.subscribe()
 
     def subscribe(self):
@@ -48,76 +55,82 @@ class ReportBuilder:
             )
 
     def generate_report(self, report: Union[MonthReport, QuarterReport]):
+        if not self._is_valid_format(report):
+            return
 
+        if not self._is_valid_path(report):
+            return
+
+        if not self._has_data(report):
+            return
+
+        self._export(report)
+
+    def _is_valid_format(self, report) -> bool:
         if report.file_format not in self._formats:
-            self._logger.warning(f"Формат '{report.file_format}' не поддерживается. "
-                                 f"Поддерживаемые форматы: {self._formats}.")
-            return
-
-        if not report.data:
-            message = (
-                f"Нет данных за указанный период: "
-                f"{report.month}/{report.year}" if isinstance(report, MonthReport)
-                else f"Квартал {report.quarter} {report.year}"
+            self._logger.warning(
+                f"Формат '{report.file_format}' не поддерживается. "
+                f"Поддерживаемые форматы: {self._formats}."
             )
+            return False
+        return True
 
-            EventBus.publish(
-                Event(event_type=EventType.BACK.EXPORT.NO_DATA),
-                message
-            )
-
+    def _is_valid_path(self, report) -> bool:
+        path = Path(report.save_path).parent
+        if not path.exists() or not path.is_dir():
+            message = f"Каталог для сохранения отчёта недоступен или не существует: {path}"
+            EventBus.publish(Event(event_type=EventType.BACK.EXPORT.MESSAGE), message)
             self._logger.warning(f"Пропущен экспорт: {message}")
-            return
+            return False
+        return True
+
+    def _has_data(self, report) -> bool:
+        if report.data:
+            return True
 
         if isinstance(report, MonthReport):
-
-            if report.file_format == "xlsx":
-                from .xlsx import generate_xlsx_month_report
-                generate_xlsx_month_report(
-                    month=report.month,
-                    year=report.year,
-                    data=report.data,
-                    save_path=report.save_path,
-                    table_headers=self.month_table_headers
-                )
-
-            elif report.file_format == "xls":
-                self._logger.warning("Поддержка 'xls' пока не доступна.")
-                return
-
-            else:
-                from .csv import generate_csv_report
-                generate_csv_report(
-                    data=report.data,
-                    save_path=report.save_path,
-                    table_headers=self.month_table_headers
-                )
-            self._logger.info(f"Месячный отчет экспортирован {report.save_path}")
-
-        elif isinstance(report, QuarterReport):
-
-            if report.file_format == "xlsx":
-                from .xlsx import generate_xlsx_quarter_report
-                generate_xlsx_quarter_report(
-                    quarter=report.quarter,
-                    year=report.year,
-                    data=report.data,
-                    save_path=report.save_path,
-                    table_headers=self.quarter_table_headers
-                )
-
-            elif report.file_format == "xls":
-                self._logger.warning("Поддержка 'xls' пока не доступна.")
-                return
-
-            else:
-                from .csv import generate_csv_report
-                generate_csv_report(
-                    data=report.data,
-                    save_path=report.save_path,
-                    table_headers=self.quarter_table_headers
-                )
-            self._logger.info(f"Квартальный отчет экспортирован {report.save_path}")
-
+            message = (f"За {self.RU_MONTHS_GEN[report.month]} {report.year} "
+                       f"года нет данных для экспорта.")
         else:
-            self._logger.error("Неверный тип отчета.")
+            message = (f"За {report.quarter}-й квартал {report.year} "
+                       f"года нет данных для экспорта.")
+
+        EventBus.publish(Event(event_type=EventType.BACK.EXPORT.MESSAGE), message)
+
+        self._logger.warning(f"Пропущен экспорт: {message}")
+        return False
+
+    def _export(self, report):
+        if isinstance(report, MonthReport):
+            headers = self.month_table_headers
+            label = "Месячный"
+            args = {"month": report.month, "year": report.year}
+        elif isinstance(report, QuarterReport):
+            headers = self.quarter_table_headers
+            label = "Квартальный"
+            args = {"quarter": report.quarter, "year": report.year}
+        else:
+            self._logger.warning("Неверный тип отчета.")
+            return
+
+        if report.file_format == "xlsx":
+            from .xlsx import generate_xlsx_month_report, generate_xlsx_quarter_report
+            func = generate_xlsx_month_report if isinstance(
+                report, MonthReport) else generate_xlsx_quarter_report
+
+            func(
+                data=report.data,
+                save_path=report.save_path,
+                table_headers=headers,
+                **args
+            )
+        else:
+            from .csv import generate_csv_report
+            generate_csv_report(
+                data=report.data,
+                save_path=report.save_path,
+                table_headers=headers
+            )
+
+        self._logger.info(f"{label} отчет экспортирован {report.save_path}")
+
