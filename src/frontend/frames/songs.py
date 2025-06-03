@@ -14,7 +14,7 @@ class SongsTable(Table):
             self,
             parent,
             group_id: GROUP,
-            headers: List[str],
+            header_map: Dict[str, str],
             data: List[List[str]],
             stretchable_column_indices: List[int],
             prev_cols_state: Dict[str, int],
@@ -22,7 +22,7 @@ class SongsTable(Table):
             default_report_values: Dict[str, Any],
             scroll_to_the_bottom: bool
     ):
-        super().__init__(parent, group_id, headers, data, stretchable_column_indices,
+        super().__init__(parent, group_id, header_map, data, stretchable_column_indices,
                          prev_cols_state, enable_tooltips, scroll_to_the_bottom)
 
         self._default_report_values = default_report_values

@@ -2,6 +2,7 @@ import logging
 from functools import partial
 from typing import List, Dict, Set, Union, Tuple, Optional
 from collections.abc import ValuesView
+from datetime import datetime
 
 import tkinter as tk
 import tkinter.messagebox as messagebox
@@ -42,6 +43,7 @@ class DataTable(ttk.Frame):
         # где direction = 1 (▲), -1 (▼), 0 (нет)
         self._current_sort: Optional[Tuple[str, int]] = None
         self._sort_debounce_id = None
+        self._sort_debounce_active = False
 
         self._heading_tooltip = None
         self._heading_tooltip_after_id = None
@@ -129,6 +131,7 @@ class DataTable(ttk.Frame):
         self.dt.bind("<Double-1>", self._open_selected_row)
         self.dt.bind("<ButtonPress-1>", self._on_mouse_press)
         self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
+        self.dt.bind("<Delete>", self._delete_selected_rows)
         self.bind("<Configure>", self._resize_columns)
 
         if self._enable_tooltips:
@@ -196,15 +199,20 @@ class DataTable(ttk.Frame):
                 self._current_sort = (column, 1)
                 self.dt.heading(column, text=f"▲ {column}")
 
-        # Дебаунс публикации события
-        if self._sort_debounce_id:
-            self.after_cancel(self._sort_debounce_id)
+        # Дебаунс
+        if self._sort_debounce_id is not None and self._sort_debounce_active:
+            try:
+                self.after_cancel(self._sort_debounce_id)
+            except Exception:
+                pass  # таймер уже сработал
+            self._sort_debounce_id = None
 
-        # Через 300 мс вызовем publish с текущим состоянием сортировки
+        self._sort_debounce_active = True
         self._sort_debounce_id = self.after(300, partial(self._debounced_sort_publish))
 
     def _debounced_sort_publish(self):
         """Публикует событие сортировки с задержкой (дебаунс)."""
+        self._sort_debounce_active = False
         self._sort_debounce_id = None
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED,
@@ -360,7 +368,7 @@ class DataTable(ttk.Frame):
                 self._group_id, card_id
             )
 
-    def _delete_selected_rows(self):
+    def _delete_selected_rows(self, event=None):
         """Удаляет выбранные строки."""
         selected_items = self.dt.selection()
         if not selected_items:
@@ -605,6 +613,7 @@ class TableBuffer:
         self._group_id = group_id
         self.original_data: Dict[str, List[str]] = {}
         self.sorted_keys: List[str] = []  # Отсортированные ключи
+        self.header_map: Dict[str, str] = {}
 
         self.max_history = max_history
         self.history: List[Tuple[str, List[str]]] = []  # (term, list_of_keys)
@@ -677,7 +686,8 @@ class TableBuffer:
             keys = list(self.original_data.keys())
             if direction:
                 keys.sort(
-                    key=lambda k: self._sort_key(k, column_idx, column_name),
+                    key=lambda k: self._sort_key(
+                        k, column_idx, self.header_map.get(column_name)),
                     reverse=(direction < 0)
                 )
             self.sorted_keys = keys
@@ -779,21 +789,34 @@ class TableBuffer:
 
     def _sort_key(self, card_id: str, column_idx: int, column_name: str):
         val = self.original_data[card_id][column_idx]
-        if column_name == "ID":
-            primary_key = int(val)
-        elif column_name.lower() == "время":
-            try:
-                parts = val.strip().split(":")
-                h, m, s = (list(map(int, parts)) + [0, 0])[:3]
-                primary_key = h * 3600 + m * 60 + s
-            except ValueError:
-                primary_key = float('inf')
-        else:
-            primary_key = val.lower()
 
+        if column_name in ("id", "play_count"):
+            try:
+                primary_key = int(val)
+            except (ValueError, TypeError):
+                primary_key = float('inf')
+
+        elif column_name in {"duration", "play_duration", "total_duration", "time"}:
+            # Поддержка форматов: "HH:MM:SS", "MM:SS"
+            try:
+                h, m, s = (list(map(int, val.strip().split(":"))) + [0, 0, 0])[:3]
+                primary_key = h * 3600 + m * 60 + s
+            except (ValueError, TypeError):
+                primary_key = float('inf')
+
+        elif column_name == "date":
+            try:
+                primary_key = datetime.strptime(val.strip(), "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                primary_key = datetime.max.date()
+
+        else:
+            primary_key = str(val).lower()
+
+        # Используем id как вторичный ключ (для стабильной сортировки)
         try:
-            id_key = int(self.original_data[card_id][0])
-        except ValueError:
+            id_key = int(card_id)
+        except (ValueError, TypeError):
             id_key = float('inf')
 
         return primary_key, id_key
@@ -808,7 +831,7 @@ class Table(ttk.Frame):
             self,
             parent,
             group_id: GROUP,
-            headers: List[str],
+            header_map: Dict[str, str],
             data: List[List[str]],
             stretchable_column_indices: List[int],
             prev_cols_state: Dict[str, int],
@@ -833,12 +856,14 @@ class Table(ttk.Frame):
 
         # Configure
         SONGS_DICT = {row[0]: list(row) for row in data}
+        HEADER_LIST = list(header_map.keys())
         self.buffer.original_data = SONGS_DICT
+        self.buffer.header_map = header_map
         self.buffer.sorted_keys = list(SONGS_DICT.keys())
-        self.data_table.estimated_column_widths = self._estimate_column_lengths(headers, data)
+        self.data_table.estimated_column_widths = self._estimate_column_lengths(HEADER_LIST, data)
 
         self.data_table.create_table(
-            headers=headers,
+            headers=HEADER_LIST,
             data=data,
             stretchable_column_indices=stretchable_column_indices
         )

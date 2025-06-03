@@ -115,6 +115,7 @@ class TableAdapter:
         Поддерживает спец. колонку 'datetime' = объединение 'date' и 'time' в datetime.datetime.
         """
         result = []
+        db_rows.sort(key=lambda x: (x.get("date"), x.get("id")))
         for row in db_rows:
             line = []
             for col in column_order:
@@ -122,6 +123,8 @@ class TableAdapter:
                     date_val = row.get("date")
                     time_val = row.get("time")
                     line.append(datetime.combine(date_val, time_val))
+                elif col == "play_count":
+                    line.append(int(row.get(col)))
                 else:
                     line.append(row.get(col))
             result.append(line)

@@ -1,7 +1,7 @@
 from .backend.service import BackendService
 from .frontend.window import Window
 
-from .backend.db.order_map import DEFAULT_CARD_VALUES, get_headers
+from .backend.db.order_map import DEFAULT_CARD_VALUES, FIELD_MAPS
 
 from .frontend.frames import SongsTable, Report, Export, Settings
 from .frontend.widgets import Terminal, Table, CardManager, TopMenu
@@ -38,9 +38,9 @@ def bootstrap():
     #  - 5. Эта логика все время делает одно и тоже (_adjust_column_widths), и это нужно кэшировать
     #   (пока размеры считаются только на старте, и нет логики обновлений self.estimated_column_widths).
     #  - 6. Написать виджет настроек. И добавить таблицу настроек в бд.
-    #  - 7. Проверить функцию-ключ сортировки в буфере таблицы
+    #  + 7. Проверить функцию-ключ сортировки в буфере таблицы
     #  - 8. Привести логи к одному унифицированному виду, и сделать на 1 языке (ru, тут будет)
-    #  - 9. Добавить bind на Del для удаления элементов из таблицы
+    #  + 9. Добавить bind на Del для удаления элементов из таблицы
     #  - 10. Добавить логику проверки открытых карточек перед закрытием, сохранять или нет.
     #  ? 11. Исправить баг с переключением сортировки, когда не работает дебаунс, а просто блокирует.
     #  - 12. Добавить слой валидации введенных пользователем данных, перед адаптером
@@ -50,14 +50,17 @@ def bootstrap():
     #  - 13. Написать скрипт для легкого экспорта из excel файлов и добавления в базу.
     #  - 14. Установить ВМ с Windows 7 и адаптировать под версию python 3.8.xx, проверить
     #  какие зависимости потребует, и написать док как установить на шиндоус.
-    #  - 15. Исправить баг с форматом в экспортируемом отчете, сейчас там где "play_count",
+    #  + 15. Исправить баг с форматом в экспортируемом отчете, сейчас там где "play_count",
     #  текст, должно быть число.
-    #  - 16. Нужно чтобы у отчетов был консистентный вид, поэтому перед записью в файл,
+    #  + 16. Нужно чтобы у отчетов был консистентный вид, поэтому перед записью в файл,
     #  нужно отсортировать таблицу, которая приходит в builder, по колонке "datetime",
     #  такая появляется после выхода с адаптера. (и возможно по id но он не передается,
     #  поэтому не факт что это нужно)
     #  - 17. Нужно сохранять состояние сортировки из таблиц, и передавать в базу
     #  при обновлении. На старте соответственно применять сортировку.
+    #  - 18. Сделать в 'Table' в подклассах инъекции зависимостей в их конструктор (на потом)
+    #  - 19. Сделать чтобы если в таблице 'report' работал прокрутка вниз если нет
+    #  фильтра, также совместить с пунктом 18.
 
     # -------------------------------
     # Backend initialization
@@ -86,7 +89,7 @@ def bootstrap():
     songs = SongsTable(
         parent=window.content,
         group_id=GROUP.SONGS_TABLE,
-        headers=get_headers(HEADER.SONGS),
+        header_map=FIELD_MAPS.get(HEADER.SONGS),
         data=all_songs_list,
         stretchable_column_indices=[1, 2, 4, 5, 6],
         prev_cols_state=songs_table_cols_state,
@@ -98,7 +101,7 @@ def bootstrap():
     report = Table(
         parent=window.content,
         group_id=GROUP.REPORT_TABLE,
-        headers=get_headers(HEADER.REPORT),
+        header_map=FIELD_MAPS.get(HEADER.REPORT),
         data=all_report_list,
         stretchable_column_indices=[3, 4, 7, 8, 12],
         prev_cols_state=report_table_cols_state,

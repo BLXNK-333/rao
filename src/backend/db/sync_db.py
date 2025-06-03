@@ -79,13 +79,14 @@ class SyncDB:
             self.db.update_card(card_id=card_id, table_name=table_name, payload=remapped_data)
         else:
             card_id = self.db.add_card(table_name=table_name, payload=remapped_data)
-            data["ID"] = card_id
+            remapped_data["id"] = card_id
             EventBus.publish(Event(EventType.BACK.DB.CARD_ID), card_key, card_id)
 
+        to_view = adapter.to_view(remapped_data)
         EventBus.publish(Event(
             event_type=EventType.BACK.DB.CARD_VALUES,
             group_id=GROUP(table_name)
-        ), list(data.values()))
+        ), list(to_view.values()))
 
     def delete_card(self, deleted_ids: List[str], table_name: str):
         self.db.delete_card(deleted_ids, table_name)
