@@ -87,6 +87,7 @@ class EventType:
             CARD_ID = "BACK.DB.CARD_ID"
             CARD_DICT = "BACK.DB.CARD_DICT"
             REPORT = "BACK.DB.REPORT"
+            VALIDATION = "BACK.DB.VALIDATION"
 
         class EXPORT:
             MESSAGE = "BACK.EXPORT.MESSAGE"

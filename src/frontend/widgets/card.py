@@ -101,6 +101,17 @@ class CardFields(ttk.Frame):
         entry.config(state="disabled")
         entry.edit_modified(False)
 
+    def highlight_bad_fields(self, fields_map: Dict[str, bool]):
+        """Подсвечивает поля с ошибками розовым, остальные — белым."""
+        for field, widget in self.entries.items():
+            is_valid = fields_map.get(field, True)
+            new_color = "#ffc0cb" if not is_valid else "white"
+            try:
+                widget.config(bg=new_color)
+            except tk.TclError:
+                # Иногда текстовые поля в readonly могут кидать ошибку — игнорируем
+                pass
+
 
 class CardButtons(ttk.Frame):
     def __init__(self, parent: ttk.Frame, editor: "CardEditor"):
@@ -183,7 +194,6 @@ class CardEditor(tk.Toplevel, BaseWindow):
             Event(event_type=EventType.VIEW.CARD.SAVE),
             self.card_key, self.table, data
         )
-        self.on_close()
 
     def on_close(self):
         EventBus.publish(
@@ -198,10 +208,14 @@ class CardEditor(tk.Toplevel, BaseWindow):
 
 
 class CardManager:
-    def __init__(self, parent: tk.Frame):
+    def __init__(
+            self,
+            parent: tk.Frame,
+            default_card_values: Dict[HEADER, Dict[str, str]]
+    ):
         self.parent = parent
         self.opened_cards: Dict[str, CardEditor] = {}
-        self.default_values = {}
+        self.default_values = default_card_values
 
         self.subscribe()
 
@@ -211,7 +225,8 @@ class CardManager:
             (EventType.VIEW.TABLE.PANEL.ADD_CARD, self.open_card),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self._del_card_ids),
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
-            (EventType.BACK.DB.CARD_ID, self._update_card_id)
+            (EventType.BACK.DB.CARD_ID, self._update_card_id),
+            (EventType.BACK.DB.VALIDATION, self._highlight_bad_fields)
         ]
 
         for event, handler in subscriptions:
@@ -219,9 +234,6 @@ class CardManager:
                 event_type=event,
                 subscriber=Subscriber(callback=handler, route_by=DispatcherType.TK)
             )
-
-    def set_default_card_values(self, values_dict: Dict[HEADER, Dict[str, str]]):
-        self.default_values = values_dict
 
     def _update_card_id(self, card_key: str, card_id: str):
         card = self.opened_cards.get(card_key)
@@ -242,8 +254,9 @@ class CardManager:
 
     def open_card(self, table: str, card_dict: Dict[str, str], unlock_save: bool = False):
         card_key = self.generate_card_key()
-        headers = list(self.default_values.get(table).keys())
-        data = card_dict if card_dict else copy.deepcopy(self.default_values.get(table))
+        table_name = HEADER(table)
+        headers = list(self.default_values.get(table_name).keys())
+        data = card_dict if card_dict else copy.deepcopy(self.default_values.get(table_name))
 
         card = CardEditor(
             parent=self.parent,
@@ -266,3 +279,14 @@ class CardManager:
                 return comb
         raise RuntimeError(
             f"Failed to generate a unique ID after {max_attempts} attempts")
+
+    def _highlight_bad_fields(self, card_key: str, validation_result: Dict[str, bool]):
+
+        if all(validation_result.values()):
+            self._destroy_card(card_key)
+        else:
+            open_card = self.opened_cards.get(card_key)
+            open_card.fields.highlight_bad_fields(validation_result)
+
+
+        print(f"card_key: {card_key}, result: {validation_result}")

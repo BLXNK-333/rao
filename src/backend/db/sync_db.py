@@ -2,6 +2,7 @@ from typing import Dict, List, Any, Union
 
 from .database import Database
 from .adapter import TableAdapter
+from .validator import DataValidator
 from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE
 from ...eventbus import Event, Subscriber, EventBus
 from ...entities import MonthReport, QuarterReport
@@ -17,6 +18,7 @@ class SyncDB:
             HEADER.SONGS: _song_adapter,
             HEADER.REPORT: _report_adapter
         }
+        self.validator = DataValidator()
         self.subscribe()
 
     def subscribe(self):
@@ -71,9 +73,13 @@ class SyncDB:
         )
 
     def save_card(self, card_key: str, table_name: str, data: Dict[str, str]):
+        if not self.validator.validate(card_key, table_name, data):
+            return
+
         card_id = data.get("ID")
         adapter = self.adapters.get(table_name)
         remapped_data = adapter.to_db(data)
+
 
         if card_id:
             self.db.update_card(card_id=card_id, table_name=table_name, payload=remapped_data)

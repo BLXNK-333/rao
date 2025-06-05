@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Dict, List, Type
 from datetime import datetime, time
 
@@ -15,6 +16,7 @@ class TableAdapter:
     }
 
     def __init__(self, table_name: str):
+        self._logger = logging.getLogger(__name__)
         self.header = HEADER(table_name.lower())
         self.model = self.MODEL_MAP[self.header]
         self.fields_map = FIELD_MAPS[self.header]
@@ -71,7 +73,7 @@ class TableAdapter:
                 return datetime.strptime(value, "%Y-%m-%d").date()
 
             elif isinstance(column_type, Time):
-                if field_name == "duration" or len(value.split(":")) == 2:
+                if "duration" in field_name and len(value.split(":")) == 2:
                     m, s = map(int, value.split(":"))
                     return time(minute=m, second=s)
                 return datetime.strptime(value, "%H:%M:%S").time()
@@ -89,7 +91,8 @@ class TableAdapter:
                 return value.lower() in ("true", "1", "yes", "on")
 
         except Exception:
-            print(f"[WARN] Failed to coerce field '{field_name}' with value '{value}' to {column_type}")
+            self._logger.warning(f"Failed to coerce field '{field_name}' "
+                                 f"with value '{value}' to {column_type}")
         return value
 
     def _stringify(self, value: Any, column_type: Any, field_name: str = "") -> str:
@@ -98,9 +101,9 @@ class TableAdapter:
         if isinstance(column_type, Date):
             return value.strftime("%Y-%m-%d")
         elif isinstance(column_type, Time):
-            if "duration" in field_name:
+            if "duration" in field_name and value.hour == 0:
                 return f"{value.minute}:{value.second:02}"
-            return value.strftime("%H:%M:%S")
+            return f"{value.hour}:{value.minute:02}:{value.second:02}"
         elif isinstance(column_type, DateTime):
             return value.strftime("%Y-%m-%d %H:%M:%S")
         return str(value)

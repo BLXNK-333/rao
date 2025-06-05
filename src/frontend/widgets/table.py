@@ -797,10 +797,20 @@ class TableBuffer:
                 primary_key = float('inf')
 
         elif column_name in {"duration", "play_duration", "total_duration", "time"}:
-            # Поддержка форматов: "HH:MM:SS", "MM:SS"
+            # Поддержка форматов: "HH:MM:SS", "MM:SS", "SS"
             try:
-                h, m, s = (list(map(int, val.strip().split(":"))) + [0, 0, 0])[:3]
+                parts = list(map(int, val.strip().split(":")))
+
+                if len(parts) == 3:
+                    h, m, s = parts
+                elif len(parts) == 2:
+                    h, m, s = 0, parts[0], parts[1]
+                elif len(parts) == 1:
+                    h, m, s = 0, 0, parts[0]
+                else:
+                    raise ValueError("Too many parts")
                 primary_key = h * 3600 + m * 60 + s
+
             except (ValueError, TypeError):
                 primary_key = float('inf')
 
