@@ -105,7 +105,7 @@ class CardFields(ttk.Frame):
         """Подсвечивает поля с ошибками розовым, остальные — белым."""
         for field, widget in self.entries.items():
             is_valid = fields_map.get(field, True)
-            new_color = "#ffc0cb" if not is_valid else "white"
+            new_color = "#ffd2da" if not is_valid else "white"
             try:
                 widget.config(bg=new_color)
             except tk.TclError:
@@ -287,6 +287,3 @@ class CardManager:
         else:
             open_card = self.opened_cards.get(card_key)
             open_card.fields.highlight_bad_fields(validation_result)
-
-
-        print(f"card_key: {card_key}, result: {validation_result}")

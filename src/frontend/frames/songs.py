@@ -20,10 +20,10 @@ class SongsTable(Table):
             prev_cols_state: Dict[str, int],
             enable_tooltips: bool,
             default_report_values: Dict[str, Any],
-            scroll_to_the_bottom: bool
+            show_table_end: bool
     ):
         super().__init__(parent, group_id, header_map, data, stretchable_column_indices,
-                         prev_cols_state, enable_tooltips, scroll_to_the_bottom)
+                         prev_cols_state, enable_tooltips, show_table_end)
 
         self._default_report_values = default_report_values
         self._create_add_to_report_button()

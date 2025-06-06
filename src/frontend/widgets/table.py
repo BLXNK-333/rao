@@ -23,7 +23,13 @@ class DataTable(ttk.Frame):
 
     # region Initialization and Subscriptions
 
-    def __init__(self, parent, group_id: GROUP, enable_tooltips=False):
+    def __init__(
+            self,
+            parent,
+            group_id: GROUP,
+            enable_tooltips: bool = False,
+            show_table_end: bool = False
+    ):
         super().__init__(parent)
 
         self._group_id = group_id
@@ -31,6 +37,7 @@ class DataTable(ttk.Frame):
         self._enable_tooltips = enable_tooltips
         self._headers: List[str] = []
         self._stretchable_column_indices: Set[int] = set()
+        self._show_table_end: bool = show_table_end
         self._table_len = 0
 
         self.estimated_column_widths: Dict[str, int] = {}
@@ -396,11 +403,23 @@ class DataTable(ttk.Frame):
         )
 
     def _filter_table(
-            self, filtered: Union[List[List[str]], ValuesView[List[str]]]) -> None:
+            self,
+            rows: List[List[str]],
+            is_full: bool = True
+    ) -> None:
         """Обновляет таблицу, показывая только отфильтрованные данные
         и перекрашивает строки."""
-        self._fill_table(filtered)
+        self._fill_table(rows)
         self._recolor_rows()
+        self.scroll_to_bottom(rows, is_full)
+
+    def scroll_to_bottom(self, rows: List[List[str]], is_full: bool):
+        """Прокручивает в конец если задан self._show_table_end=True в конструкторе"""
+        if self._show_table_end and rows:
+            if is_full:
+                self.dt.see(rows[-1][0])
+            else:
+                self.dt.see(rows[0][0])
 
     # endregion
 
@@ -670,7 +689,7 @@ class TableBuffer:
                 event_type=EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE,
                 group_id=self._group_id
             ),
-            data
+            data, self.current_filter_term == ""
         )
 
     def _update_history(self, term: str, keys: List[str]):
@@ -846,7 +865,7 @@ class Table(ttk.Frame):
             stretchable_column_indices: List[int],
             prev_cols_state: Dict[str, int],
             enable_tooltips: bool,
-            scroll_to_the_bottom: bool
+            show_table_end: bool
     ):
         super().__init__(parent)
         self._setup_layout()
@@ -860,7 +879,8 @@ class Table(ttk.Frame):
         self.data_table = DataTable(
             parent=self,
             group_id=group_id,
-            enable_tooltips=enable_tooltips
+            enable_tooltips=enable_tooltips,
+            show_table_end=show_table_end
         )
         self.buffer = TableBuffer(group_id=group_id)
 
@@ -883,8 +903,7 @@ class Table(ttk.Frame):
         self.data_table.user_defined_widths = prev_cols_state
 
         # Scroll to the table bottom
-        if scroll_to_the_bottom and data:
-            self.data_table.dt.see(data[-1][0])
+        self.data_table.scroll_to_bottom(rows=data, is_full=True)
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:

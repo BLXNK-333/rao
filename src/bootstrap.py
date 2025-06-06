@@ -59,7 +59,7 @@ def bootstrap():
     #  - 17. Нужно сохранять состояние сортировки из таблиц, и передавать в базу
     #  при обновлении. На старте соответственно применять сортировку.
     #  - 18. Сделать в 'Table' в подклассах инъекции зависимостей в их конструктор (на потом)
-    #  - 19. Сделать чтобы если в таблице 'report' работал прокрутка вниз если нет
+    #  + 19. Сделать чтобы если в таблице 'report' работал прокрутка вниз если нет
     #  фильтра, также совместить с пунктом 18.
     #  + 20. Дописать слой валидации.
     #  * 21. Можно оптимизировать логику сохранения карточек в view, чтобы не было
@@ -107,7 +107,7 @@ def bootstrap():
         prev_cols_state=songs_table_cols_state,
         enable_tooltips=False,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
-        scroll_to_the_bottom=False
+        show_table_end=False
     )
 
     report = Table(
@@ -118,7 +118,7 @@ def bootstrap():
         stretchable_column_indices=[3, 4, 7, 8, 12],
         prev_cols_state=report_table_cols_state,
         enable_tooltips=True,
-        scroll_to_the_bottom=True
+        show_table_end=True
     )
     export = Export(
         parent=window.content,
