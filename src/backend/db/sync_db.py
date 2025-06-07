@@ -69,7 +69,7 @@ class SyncDB:
         remapped_row = adapter.to_view(db_row)
         EventBus.publish(
             Event(event_type=EventType.BACK.DB.CARD_DICT),
-            table_name, remapped_row
+            "", table_name, remapped_row
         )
 
     def save_card(self, card_key: str, table_name: str, data: Dict[str, str]):
@@ -80,7 +80,6 @@ class SyncDB:
         adapter = self.adapters.get(table_name)
         remapped_data = adapter.to_db(data)
 
-
         if card_id:
             self.db.update_card(card_id=card_id, table_name=table_name, payload=remapped_data)
         else:
@@ -89,10 +88,17 @@ class SyncDB:
             EventBus.publish(Event(EventType.BACK.DB.CARD_ID), card_key, card_id)
 
         to_view = adapter.to_view(remapped_data)
+        # Генерируем событие для таблицы
         EventBus.publish(Event(
             event_type=EventType.BACK.DB.CARD_VALUES,
             group_id=GROUP(table_name)
         ), list(to_view.values()))
+
+        # Генерируем событие для Card Manager
+        EventBus.publish(
+            Event(event_type=EventType.BACK.DB.CARD_DICT),
+            card_key, table_name, to_view
+        )
 
     def delete_card(self, deleted_ids: List[str], table_name: str):
         self.db.delete_card(deleted_ids, table_name)

@@ -104,12 +104,25 @@ class CardFields(ttk.Frame):
     def highlight_bad_fields(self, fields_map: Dict[str, bool]):
         """Подсвечивает поля с ошибками розовым, остальные — белым."""
         for field, widget in self.entries.items():
+            if field == "ID":
+                continue
+
             is_valid = fields_map.get(field, True)
             new_color = "#ffd2da" if not is_valid else "white"
             try:
                 widget.config(bg=new_color)
             except tk.TclError:
                 # Иногда текстовые поля в readonly могут кидать ошибку — игнорируем
+                pass
+
+    def clear_field_highlight(self):
+        """Снимает подсветку всех полей, устанавливая белый фон."""
+        for field, widget in self.entries.items():
+            if field == "ID":
+                continue
+            try:
+                widget.config(bg="white")
+            except tk.TclError:
                 pass
 
 
@@ -188,8 +201,6 @@ class CardEditor(tk.Toplevel, BaseWindow):
 
     def on_save(self):
         data = self.fields.get_data()
-        self.fields.data = data
-        self.buttons.set_save_button_enabled(False)
         EventBus.publish(
             Event(event_type=EventType.VIEW.CARD.SAVE),
             self.card_key, self.table, data
@@ -204,7 +215,10 @@ class CardEditor(tk.Toplevel, BaseWindow):
     def update_save_button_state(self):
         """Обновляет состояние кнопки Save в зависимости от наличия изменений."""
         state = self.fields.has_changes()
-        self.buttons.set_save_button_enabled(state)
+        if not state:
+            self.fields.clear_field_highlight()
+        if self.get_id():
+            self.buttons.set_save_button_enabled(state)
 
 
 class CardManager:
@@ -221,8 +235,8 @@ class CardManager:
 
     def subscribe(self):
         subscriptions = [
-            (EventType.BACK.DB.CARD_DICT, self.open_card),
-            (EventType.VIEW.TABLE.PANEL.ADD_CARD, self.open_card),
+            (EventType.BACK.DB.CARD_DICT, self._on_card_dict),
+            (EventType.VIEW.TABLE.PANEL.ADD_CARD, self._open_card),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self._del_card_ids),
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
             (EventType.BACK.DB.CARD_ID, self._update_card_id),
@@ -252,7 +266,21 @@ class CardManager:
         card = self.opened_cards.pop(card_key)
         card.destroy()
 
-    def open_card(self, table: str, card_dict: Dict[str, str], unlock_save: bool = False):
+    def _on_card_dict(self, card_key: str, table: str, card_dict: Dict[str, str]):
+        """Тут реагирует на рассылку словаря карточки, если карточка открыта, обновляет.
+        Иначе, открывает новую."""
+        if card_key:
+            self._update_card(card_key, card_dict)
+        else:
+            self._open_card(table, card_dict)
+
+    def _update_card(self, card_key: str, card_dict: Dict[str, str]):
+        open_card = self.opened_cards.get(card_key)
+        if open_card:
+            open_card.fields.data = card_dict
+            open_card.buttons.set_save_button_enabled(False)
+
+    def _open_card(self, table: str, card_dict: Dict[str, str], unlock_save: bool = False):
         card_key = self.generate_card_key()
         table_name = HEADER(table)
         headers = list(self.default_values.get(table_name).keys())
@@ -281,9 +309,26 @@ class CardManager:
             f"Failed to generate a unique ID after {max_attempts} attempts")
 
     def _highlight_bad_fields(self, card_key: str, validation_result: Dict[str, bool]):
+        """
+        Подсвечивает не валидные поля в открытой карточке.
+
+        :param card_key: Ключ открытой карточки.
+        :param validation_result: Словарь, где ключ - название поле, а значение - статус
+        """
+        open_card = self.opened_cards.get(card_key)
 
         if all(validation_result.values()):
+            open_card.fields.data = open_card.fields.get_data()
             self._destroy_card(card_key)
         else:
-            open_card = self.opened_cards.get(card_key)
             open_card.fields.highlight_bad_fields(validation_result)
+
+    def has_open_cards(self) -> bool:
+        """Проверяет есть ли не сохраненные карточки, среди открытых."""
+        return any(card.fields.has_changes() for card in self.opened_cards.values())
+
+    def lift_all_cards(self):
+        """Поднять все открытые карточки на передний план."""
+        for card in self.opened_cards.values():
+            card.lift()
+

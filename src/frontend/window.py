@@ -1,9 +1,10 @@
+from typing import Optional
 from functools import partial
 
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from ttkthemes import ThemedTk
 
-from .widgets import BaseWindow, TopMenu, Terminal
+from .widgets import BaseWindow, TopMenu, Terminal, CardManager
 
 from ..eventbus import EventBus, Subscriber, Event
 from ..enums import TERM, EventType, DispatcherType
@@ -31,7 +32,8 @@ class Window(ThemedTk, BaseWindow):
         self.terminal_state = TERM.MEDIUM   # (начальный размер)
         self.terminal = None                # (установить после через self.setup_layout)
 
-
+        # Нужен для управления карточками перед закрытием
+        self.card_manager: CardManager = Optional[None]
 
     def subscribe(self):
         handlers = {
@@ -47,8 +49,9 @@ class Window(ThemedTk, BaseWindow):
                 Subscriber(callback=handler, route_by=DispatcherType.TK)
             )
 
-    def setup_layout(self, menu: TopMenu, terminal: Terminal):
+    def setup_layout(self, menu: TopMenu, terminal: Terminal, card_manager: CardManager):
         self.terminal = terminal
+        self.card_manager = card_manager
 
         # Настройки размещения меню фреймов (0 строка в сетке)
         menu.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
@@ -113,6 +116,19 @@ class Window(ThemedTk, BaseWindow):
             traceback.print_exc()
             self.close()
 
-    def close(self):
+    def _on_close(self):
+        if self.card_manager.has_open_cards():
+            result = messagebox.askyesno(
+                "Уведомление",
+                "Некоторые карточки не были сохранены. Выйти без сохранения?",
+                parent=self
+            )
+            if not result:
+                self.card_manager.lift_all_cards()
+                return  # пользователь отменил закрытие
+
         self.destroy()
         EventBus.publish(Event(event_type=EventType.VIEW.UI.CLOSE_WINDOW))
+
+    def close(self):
+        self.after(0, partial(self._on_close))
