@@ -1,4 +1,3 @@
-from functools import partial
 from typing import List, Dict, Any
 
 import tkinter as tk
@@ -44,7 +43,7 @@ class SongsTable(Table):
         btn_report.pack(side="right", padx=5)
 
     def add_to_report(self):
-        self.after(0, partial(self._add_to_report))
+        self.after(0, lambda: self._add_to_report())
 
     def _add_to_report(self):
         selected = self.data_table.dt.selection()

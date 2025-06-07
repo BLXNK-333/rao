@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Optional, Any, Set, Dict, List, TYPE_CHECKING, Callable
 import time
 

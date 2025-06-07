@@ -1,10 +1,10 @@
-from tkinter import ttk
+from ttkthemes import ThemedStyle
 
 
-class UIStyles(ttk.Style):
-    def __init__(self):
-        super().__init__()
-        self.theme_use("breeze")
+class UIStyles(ThemedStyle):
+    def __init__(self, root):
+        super().__init__(root)
+        self.set_theme("breeze")
         self.configure_table_styles()
         self.configure_card_styles()
         self.configure_menu_style()

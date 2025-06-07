@@ -1,7 +1,6 @@
 import logging
 import threading
 import queue
-from functools import partial
 from typing import Callable, Dict, List, Optional, Union
 from collections import defaultdict
 from abc import ABC, abstractmethod
@@ -14,7 +13,7 @@ from .enums import EventType, DispatcherType, GROUP
 class Event:
     def __init__(
             self,
-            event_type: Union[str | EventType],
+        event_type: Union[str, EventType],
             group_id: Optional[GROUP] = None,
     ):
         self.event_type = event_type
@@ -43,7 +42,7 @@ class TkDispatcher(Dispatcher):
 
     def dispatch(self, callback: Callable, *args, **kwargs):
         """Schedule callback execution in Tkinter's main loop."""
-        self.tk.after(0, partial(callback, *args, **kwargs))
+        self.tk.after(0, lambda: callback(*args, **kwargs))
 
 
 class QueueDispatcher(Dispatcher):
@@ -57,7 +56,7 @@ class QueueDispatcher(Dispatcher):
 
     def dispatch(self, callback: Callable, *args, **kwargs):
         """Enqueue the callback for execution in a background thread."""
-        self._queue.put(partial(callback, *args, **kwargs))
+        self._queue.put(lambda: callback(*args, **kwargs))
 
     def _worker(self):
         while not self._stop_event.is_set():

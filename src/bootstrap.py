@@ -96,7 +96,7 @@ def bootstrap():
     # -------------------------------
     window = Window()
     icons = Icons()
-    UIStyles()
+    UIStyles(window)
     apply_global_bindings(window)
 
     # -------------------------------

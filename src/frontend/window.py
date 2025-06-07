@@ -1,6 +1,6 @@
 from typing import Optional
-from functools import partial
 
+import tkinter as tk
 from tkinter import ttk, messagebox
 from ttkthemes import ThemedTk
 
@@ -10,7 +10,7 @@ from ..eventbus import EventBus, Subscriber, Event
 from ..enums import TERM, EventType, DispatcherType
 
 
-class Window(ThemedTk, BaseWindow):
+class Window(tk.Tk, BaseWindow):
     def __init__(self):
         super().__init__()
         self.title("RAO")
@@ -37,9 +37,9 @@ class Window(ThemedTk, BaseWindow):
 
     def subscribe(self):
         handlers = {
-            EventType.VIEW.TERM.LARGE: partial(self.resize_grid, TERM.LARGE),
-            EventType.VIEW.TERM.MEDIUM: partial(self.resize_grid, TERM.MEDIUM),
-            EventType.VIEW.TERM.SMALL: partial(self.resize_grid, TERM.SMALL),
+            EventType.VIEW.TERM.LARGE: lambda: self.resize_grid(TERM.LARGE),
+            EventType.VIEW.TERM.MEDIUM: lambda: self.resize_grid(TERM.MEDIUM),
+            EventType.VIEW.TERM.SMALL: lambda: self.resize_grid(TERM.SMALL),
             EventType.VIEW.TERM.CLOSE: self.toggle_terminal,
         }
 
@@ -131,4 +131,4 @@ class Window(ThemedTk, BaseWindow):
         EventBus.publish(Event(event_type=EventType.VIEW.UI.CLOSE_WINDOW))
 
     def close(self):
-        self.after(0, partial(self._on_close))
+        self.after(0, lambda: self._on_close())

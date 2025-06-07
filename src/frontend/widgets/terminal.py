@@ -1,7 +1,6 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from queue import Queue, Empty
-from functools import partial
 import tkinter as tk
 from tkinter import ttk
 
@@ -128,7 +127,7 @@ class TermPanel(ttk.Frame):
 
     # region SIZE ICON LOGIC
 
-    def _set_active_state(self, state: TERM, event_type: str | EventType):
+    def _set_active_state(self, state: TERM, event_type: Union[str, EventType]):
         self.focus_set()
         if self.active_state == state:
             return
@@ -178,11 +177,11 @@ class TermLogger(ttk.Frame):
         subscriptions = [
             (EventType.VIEW.TERM.CLEAR, self._clear_text),
             (EventType.VIEW.TERM.SMALL,
-             partial(self._set_height, self.HEIGHTS[TERM.SMALL])),
+             lambda: self._set_height(self.HEIGHTS[TERM.SMALL])),
             (EventType.VIEW.TERM.MEDIUM,
-             partial(self._set_height, self.HEIGHTS[TERM.MEDIUM])),
+             lambda: self._set_height(self.HEIGHTS[TERM.MEDIUM])),
             (EventType.VIEW.TERM.LARGE,
-             partial(self._set_height, self.HEIGHTS[TERM.LARGE])),
+             lambda: self._set_height(self.HEIGHTS[TERM.LARGE])),
         ]
 
         for event_type, callback in subscriptions:
@@ -210,7 +209,7 @@ class TermLogger(ttk.Frame):
         self._configure_log_tags()
 
         # Start periodic log updates
-        self.after(50, partial(self._update_log))
+        self.after(50, lambda: self._update_log())
 
     def _clear_text(self):
         self.text.config(state="normal")  # Разрешаем редактирование
@@ -234,7 +233,7 @@ class TermLogger(ttk.Frame):
     def set_state(self, state: TERM):
         self.active_state = state
 
-    def set_msq_queue(self, msq_queue: Queue[Tuple[str, str]]) -> None:
+    def set_msq_queue(self, msq_queue: Queue) -> None:
         """
         Sets the message queue for logging.
 
@@ -254,7 +253,7 @@ class TermLogger(ttk.Frame):
             pass
 
         # Schedule the next log update
-        self.after(50, partial(self._update_log))
+        self.after(50, lambda: self._update_log())
 
     def _write(self, msg: str, log_level: str) -> None:
         """

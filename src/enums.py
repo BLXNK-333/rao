@@ -1,7 +1,7 @@
-from enum import StrEnum
+from enum import Enum
 
 
-class ICON(StrEnum):
+class ICON(str, Enum):
     ADD_CARD_24 = "add_card_24"
     EDIT_CARD_24 = "edit_card_24"
     DELETE_CARD_24 = "delete_card_24"
@@ -33,35 +33,35 @@ class ICON(StrEnum):
     FOLDER_16 = "folder_16"
 
 
-class CONFIGKEYS(StrEnum):
+class CONFIGKEYS(str, Enum):
     pass
 
 
-class TERM(StrEnum):
+class TERM(str, Enum):
     """Обозначают размеры окна терминала"""
     SMALL = "SMALL"
     MEDIUM = "MEDIUM"
     LARGE = "LARGE"
 
 
-class DispatcherType(StrEnum):
+class DispatcherType(str, Enum):
     TK = "TK"
     DB = "DB"
     TABLE = "TABLE"
     COMMON = "COMMON"
 
 
-class GROUP(StrEnum):
+class GROUP(str, Enum):
     SONGS_TABLE = "songs"
     REPORT_TABLE = "report"
 
 
-class HEADER(StrEnum):
+class HEADER(str, Enum):
     SONGS = "songs"
     REPORT = "report"
 
 
-class STATE(StrEnum):
+class STATE(str, Enum):
     SONGS_COL_SIZE = "songs_col_size"
     REPORT_COL_SIZE = "report_col_size"
     MONTHLY_PATH = "monthly_path"

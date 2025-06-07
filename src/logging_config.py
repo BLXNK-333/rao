@@ -27,7 +27,7 @@ class TkinterTextHandler(logging.Handler):
     and the Tkinter main thread.
     """
 
-    def __init__(self, queue: Queue[Tuple[str, str]]) -> None:
+    def __init__(self, queue: Queue) -> None:
         """
         Initialize the log handler.
 
@@ -46,7 +46,7 @@ class TkinterTextHandler(logging.Handler):
         self.queue.put((msg, record.levelname.lower()))
 
 
-def set_logging_config(queue: Queue[Tuple[str, str]]) -> None:
+def set_logging_config(queue: Queue) -> None:
     """
     Configure logging to output to a Tkinter-compatible queue.
 

@@ -1,7 +1,5 @@
 import logging
-from functools import partial
 from typing import List, Dict, Set, Union, Tuple, Optional
-from collections.abc import ValuesView
 from datetime import datetime
 
 import tkinter as tk
@@ -85,7 +83,7 @@ class DataTable(ttk.Frame):
     def create_table(
             self,
             headers: List[str],
-            data: Union[List[List[str]], ValuesView[List[str]]],
+            data: List[List[str]],
             stretchable_column_indices: List[int]
     ):
         """Создание таблицы с заголовками и данными."""
@@ -129,7 +127,7 @@ class DataTable(ttk.Frame):
         """Настройка заголовков колонок и их событий."""
         self.dt.config(columns=self._headers)
         for idx, col in enumerate(self._headers):
-            self.dt.heading(col, text=col, command=partial(self.on_header_click, col))
+            self.dt.heading(col, text=col, command=lambda c=col: self.on_header_click(c))
             self.dt.column(col, anchor="w", width=100, stretch=False)
 
     def _apply_bindings(self):
@@ -178,7 +176,7 @@ class DataTable(ttk.Frame):
 
     def on_header_click(self, column: str):
         """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""
-        self.after(0, partial(self._on_header_click, column))
+        self.after(0, lambda col=column: self._on_header_click(col))
 
     def _on_header_click(self, column: str):
         """Обработка клика по заголовку колонки, переключение сортировки."""
@@ -215,7 +213,7 @@ class DataTable(ttk.Frame):
             self._sort_debounce_id = None
 
         self._sort_debounce_active = True
-        self._sort_debounce_id = self.after(300, partial(self._debounced_sort_publish))
+        self._sort_debounce_id = self.after(300, lambda: self._debounced_sort_publish())
 
     def _debounced_sort_publish(self):
         """Публикует событие сортировки с задержкой (дебаунс)."""
@@ -334,7 +332,7 @@ class DataTable(ttk.Frame):
             self._table_len -= 1
         self._recolor_rows()
 
-    def _fill_table(self, data: Union[List[List[str]], ValuesView[List[str]]]):
+    def _fill_table(self, data: List[List[str]]):
         """Обновляет содержимое таблицы с отфильтрованными данными."""
         self.dt.delete(*self.dt.get_children())
         self._table_len = len(data)
@@ -347,7 +345,7 @@ class DataTable(ttk.Frame):
         tag = self._get_tag(index)
         self.dt.insert("", "end", iid=card_id, values=row, tags=(tag,))
 
-    def _get_tag(self, index: int | None) -> str:
+    def _get_tag(self, index: Optional[int]) -> str:
         """Обновляет цвет строк для зебры."""
         if index is None:
             index = self._table_len
@@ -382,7 +380,7 @@ class DataTable(ttk.Frame):
             return
 
         if not tk.messagebox.askyesno(
-                "Подтверждение", "Операция требует подтверждения."):
+                "Уведомление", "Операция требует подтверждения."):
             return
 
         deleted_ids = []
@@ -441,8 +439,9 @@ class DataTable(ttk.Frame):
         # задержка перед показом тултипа (в мс)
         self._heading_tooltip_after_id = self.after(
             500,
-            partial(self._show_heading_tooltip,
-                    col_id, event.x_root + 12, event.y_root + 10))
+            lambda: self._show_heading_tooltip(col_id, event.x_root + 12,
+                                               event.y_root + 10)
+        )
 
     def _on_mouse_leave_header(self, _):
         """Отмена тултипа при уходе мыши с заголовка."""
@@ -592,13 +591,13 @@ class TablePanel(ttk.Frame):
             self.search_entry._var.set("")
 
     def clear_entry(self):
-        self.after(0, partial(self._clear_entry))
+        self.after(0, lambda: self._clear_entry())
 
     def _on_search(self, *args):
         term = self.search_var.get().lower()
         if self._debounce_id:
             self.after_cancel(self._debounce_id)
-        self._debounce_id = self.after(300, partial(self.on_search, term))
+        self._debounce_id = self.after(300, lambda: self.on_search(term))
 
     def on_search(self, term: str):
         EventBus.publish(
@@ -774,12 +773,12 @@ class TableBuffer:
         )
 
     def _insert_sorted_key(self, card_id: str, was_present: bool = False,
-                           old_pos: int | None = None):
+                           old_pos: Optional[int] = None):
         pos = self._find_insert_position(card_id, was_present, old_pos)
         self.sorted_keys.insert(pos, card_id)
 
     def _find_insert_position(self, card_id: str, was_present: bool,
-                              old_pos: int | None = None) -> int:
+                              old_pos: Optional[int] = None) -> int:
         column_idx, column_name, direction = self.current_sort
 
         if direction == 0:

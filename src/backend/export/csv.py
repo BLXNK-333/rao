@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Union
 import csv
 from pathlib import Path
 
 
 def generate_csv_report(
     data: List[List[str]],
-    save_path: str | Path,
+    save_path: Union[str, Path],
     table_headers: List[str]
 ) -> None:
     save_path = Path(save_path)

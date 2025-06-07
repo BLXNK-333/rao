@@ -1,5 +1,4 @@
 import logging
-from functools import partial
 from typing import List, Tuple, Dict
 import datetime
 
@@ -121,7 +120,7 @@ class ExportSection(ttk.Frame):
                 activebackground=active_bg,
                 font=("Segoe UI", 12, "bold"),
                 relief="flat",
-                command=partial(self.export_callback, text, self.variables),
+                command=lambda fmt=text: self.export_callback(fmt, self.variables),
                 padx=12, pady=2,
             )
             btn.pack(side="left", padx=(2, 0))
@@ -141,7 +140,7 @@ class ExportSection(ttk.Frame):
     def _debounced_path_change(self, *_):
         if self._debounce_after_id:
             self.after_cancel(self._debounce_after_id)
-        self._debounce_after_id = self.after(500, partial(self._publish_path_change))
+        self._debounce_after_id = self.after(500, lambda: self._publish_path_change())
 
     def _publish_path_change(self):
         current = self.variables["path"].get()

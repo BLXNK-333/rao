@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 import datetime
 import calendar
 from pathlib import Path
@@ -24,7 +24,7 @@ def generate_xlsx_month_report(
     month: int,
     year: int,
     data: List[List[str]],
-    save_path: str | Path,
+    save_path: Union[str, Path],
     table_headers: List[str]
 ):
     save_path = Path(save_path)
@@ -145,7 +145,7 @@ def generate_xlsx_quarter_report(
     quarter: int,
     year: int,
     data: List[List],
-    save_path: str | Path,
+    save_path: Union[str, Path],
     table_headers: List[str]
 ):
 
@@ -230,7 +230,8 @@ def generate_xlsx_quarter_report(
             # Специальная обработка
             if col_idx == 0:
                 # Столбец с кавычками
-                val_str = f'"{str(val).replace("\"", "\"\"")}"'
+                escaped = str(val).replace('"', '""')
+                val_str = f'"{escaped}"'
                 worksheet.write(row_idx, col_idx, val_str, formats[col_idx])
             elif col_idx == 1 and isinstance(val, (datetime.datetime, datetime.date)):
                 dt = val if isinstance(val,

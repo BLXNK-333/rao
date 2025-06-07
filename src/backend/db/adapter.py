@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, List, Type, Union
 from datetime import datetime, time
 
 from sqlalchemy import Date, Time, DateTime, Integer, Float, Boolean
@@ -34,7 +34,7 @@ class TableAdapter:
             }
         return {self.fields_map[k]: ui_row[k] for k in ui_row if k in self.fields_map}
 
-    def to_view(self, db_row: Dict[str, Any], transform: bool = True) -> Dict[str, str | Any]:
+    def to_view(self, db_row: Dict[str, Any], transform: bool = True) -> Dict[str, Union[str, Any]]:
         """
         Преобразует словарь ORM (из БД) в словарь с ключами для UI.
         """
