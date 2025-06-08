@@ -868,7 +868,6 @@ class Table(ttk.Frame):
     ):
         super().__init__(parent)
         self._setup_layout()
-        prev_cols_state = prev_cols_state or {}
 
         # Init
         self.group_id = group_id
@@ -897,9 +896,14 @@ class Table(ttk.Frame):
             data=data,
             stretchable_column_indices=stretchable_column_indices
         )
-        
-        if self.data_table.user_defined_widths != prev_cols_state:
+
+        if prev_cols_state is None:
+            self.table_panel.on_auto_size_applied()
+            prev_cols_state = {}
+
+        elif self.data_table.user_defined_widths != prev_cols_state:
             self.table_panel.on_manual_size()
+
         self.data_table.user_defined_widths = prev_cols_state
 
         # Scroll to the table bottom
