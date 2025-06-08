@@ -56,13 +56,14 @@ def test_filter_data_with_term(table_buffer, patch_eventbus_publish):
     filtered_call = pub_mock.call_args
     assert filtered_call is not None
 
-    event_arg, data_arg = filtered_call[0]
+    event_arg, data_arg, is_full_table = filtered_call[0]
 
     assert event_arg.event_type == EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE
     assert data_arg == [
         ["Alpha", "Beta"],
         ["AlphaGamma", "Epsilon"]
     ]
+    assert is_full_table == False
 
 
 def test_filter_data_with_empty_term(table_buffer, patch_eventbus_publish):
@@ -74,7 +75,7 @@ def test_filter_data_with_empty_term(table_buffer, patch_eventbus_publish):
     table_buffer.sorted_keys = ["1", "2"]
 
     table_buffer.filter_data("")
-    _, data_arg = pub_mock.call_args[0]
+    _, data_arg, _ = pub_mock.call_args[0]
     assert len(data_arg) == 2  # returns all
 
 
@@ -219,7 +220,8 @@ def test_sort_key_id(buffer_for_sort_tests):
         "1": ["5", "dummy"],
         "2": ["10", "dummy"]
     }
-    assert buf._sort_key("1", 0, "ID") < buf._sort_key("2", 0, "ID")
+    # Передаем column_name в нижнем регистре "id"
+    assert buf._sort_key("1", 0, "id") < buf._sort_key("2", 0, "id")
 
 
 def test_sort_key_time(buffer_for_sort_tests):
@@ -231,14 +233,14 @@ def test_sort_key_time(buffer_for_sort_tests):
         "4": ["ignored", "invalid"]
     }
 
-    key1 = buf._sort_key("1", 1, "время")
-    key2 = buf._sort_key("2", 1, "время")
-    key3 = buf._sort_key("3", 1, "время")
-    key4 = buf._sort_key("4", 1, "время")  # should be float('inf')
+    # column_name в нижнем регистре
+    key1 = buf._sort_key("1", 1, "time")
+    key2 = buf._sort_key("2", 1, "time")
+    key3 = buf._sort_key("3", 1, "time")
+    key4 = buf._sort_key("4", 1, "time")  # должно быть float('inf')
 
-    # Check ordering
     assert key1[0] < key2[0]
-    assert key3[0] > key1[0]  # seconds are taken into account
+    assert key3[0] > key1[0]
     assert key4[0] == float('inf')
 
 
