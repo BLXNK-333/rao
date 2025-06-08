@@ -173,6 +173,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.card_key = card_key
         self.table = table
+        self.is_new = not any(data.values())
 
         # Основной контейнер
         self.scrolled = ScrolledFrame(self)
@@ -217,7 +218,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         state = self.fields.has_changes()
         if not state:
             self.fields.clear_field_highlight()
-        if self.get_id():
+        if self.get_id() or self.is_new:
             self.buttons.set_save_button_enabled(state)
 
 
@@ -277,6 +278,7 @@ class CardManager:
     def _update_card(self, card_key: str, card_dict: Dict[str, str]):
         open_card = self.opened_cards.get(card_key)
         if open_card:
+            open_card.is_new = False
             open_card.fields.data = card_dict
             open_card.buttons.set_save_button_enabled(False)
 
