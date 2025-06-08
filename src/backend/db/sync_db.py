@@ -105,7 +105,7 @@ class SyncDB:
 
     def get_state(self, state_name: STATE):
         state = self.db.get_state(state_name)
-        if state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
+        if state and state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
             table_name = HEADER(state_name.value.split("_")[0])
             adapter = self.adapters.get(table_name)
             state = adapter.to_view(db_row=state, transform=False)

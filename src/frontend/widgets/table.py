@@ -868,6 +868,7 @@ class Table(ttk.Frame):
     ):
         super().__init__(parent)
         self._setup_layout()
+        prev_cols_state = prev_cols_state or {}
 
         # Init
         self.group_id = group_id
