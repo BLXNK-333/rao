@@ -1,0 +1,23 @@
+# Используемые библиотеки и лицензии
+
+Проект использует следующие сторонние библиотеки, каждая из которых лицензирована в
+соответствии с указанными условиями:
+
+1. **pytest**
+   Лицензия: MIT License
+   Подробнее: https://github.com/pytest-dev/pytest/blob/main/LICENSE
+
+2. **SQLAlchemy**
+   Лицензия: MIT License
+   Подробнее: https://github.com/sqlalchemy/sqlalchemy/blob/main/LICENSE
+
+3. **XlsxWriter**
+   Лицензия: BSD 2-Clause License
+   Подробнее: https://github.com/jmcnamara/XlsxWriter/blob/master/LICENSE.txt
+
+4. **ttkthemes**
+   Лицензия: MIT License
+   Подробнее: https://github.com/RedFantom/ttkthemes/blob/master/LICENSE
+
+Каждая из этих библиотек используется в проекте в соответствии с их лицензионными условиями.
+
