@@ -1,5 +1,6 @@
 import tkinter as tk
 from pathlib import Path
+import base64
 
 from ...enums import ICON
 
@@ -37,7 +38,7 @@ class Icons:
         ICON.TERM_LARGE_DARK_16: "square-l-dark-16.png",
         ICON.CLOSE_16: "cross-16.png",
 
-        ICON.FOLDER_16: "folder-open-16.png",
+        ICON.FOLDER_16: "folder-open-16.png"
     }
     _instance = None
     _loaded = False

@@ -16,7 +16,7 @@ def check_python_version():
                                 text=True)
         version_str = result.stdout.strip().split()[1]
         major, minor, patch = map(int, version_str.split('.')[:3])
-        if (major == 3 and minor >= 8 and patch >= 20) or (major > 3):
+        if (major == 3 and minor >= 8 and patch >= 2) or (major > 3):
             logger.info(f"Python version {version_str} is acceptable.")
             return True
         else:

@@ -1,8 +1,9 @@
 from typing import Optional
+import sys
+from pathlib import Path
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from ttkthemes import ThemedTk
 
 from .widgets import BaseWindow, TopMenu, Terminal, CardManager
 
@@ -13,9 +14,12 @@ from ..enums import TERM, EventType, DispatcherType
 class Window(tk.Tk, BaseWindow):
     def __init__(self):
         super().__init__()
-        self.title("RAO")
+        self.title("PAO")
         self.geometry("800x600")
         self.protocol("WM_DELETE_WINDOW", self.close)
+
+        if sys.platform == "win32":
+            self.iconbitmap(Path(__file__).resolve().parents[2] / "rao.ico")
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
