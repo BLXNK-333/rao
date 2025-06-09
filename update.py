@@ -3,10 +3,12 @@ import sys
 import subprocess
 import logging
 
-# Настройка логгирования на английском
+# Настройка логгирования
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+TARGET_BRANCH = "master"  # Название ветки, которую хотим синхронизировать
 
 
 def check_git_installed():
@@ -38,23 +40,50 @@ def find_virtual_env():
     return None
 
 
+def sync_branch(script_dir):
+    # Проверка наличия ветки
+    if not run_command(["git", "rev-parse", "--verify", TARGET_BRANCH], cwd=script_dir):
+        logger.warning(f"Local branch '{TARGET_BRANCH}' not found. Creating from origin.")
+        if not run_command(["git", "checkout", "-b", TARGET_BRANCH, "--track",
+                            f"origin/{TARGET_BRANCH}"], cwd=script_dir):
+            print(f"\n❌ Failed to create and track '{TARGET_BRANCH}' from remote.")
+            return False
+    else:
+        # Переход на ветку
+        if not run_command(["git", "checkout", TARGET_BRANCH], cwd=script_dir):
+            print(f"\n❌ Failed to checkout branch '{TARGET_BRANCH}'.")
+            return False
+
+    # Синхронизация с удалённой веткой
+    if not run_command(["git", "fetch", "origin"], cwd=script_dir):
+        print(f"\n❌ Failed to fetch from origin.")
+        return False
+
+    if not run_command(["git", "reset", "--hard", f"origin/{TARGET_BRANCH}"],
+                       cwd=script_dir):
+        print(f"\n❌ Failed to reset local branch to 'origin/{TARGET_BRANCH}'.")
+        return False
+
+    logger.info(f"Branch '{TARGET_BRANCH}' synchronized successfully.")
+    return True
+
+
 def main():
     print("=== Update Script Starting ===\n")
 
-    # Переход в каталог, где находится скрипт
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     logger.info(f"Changing working directory to: {script_dir}")
     os.chdir(script_dir)
 
-    # Проверка наличия git
     if not check_git_installed():
         print("\n❌ Error: Git is not installed or not in PATH.")
-    else:
-        # Выполняем git pull
-        if not run_command(["git", "pull"], cwd=script_dir):
-            print("\n❌ Error during 'git pull'. Check your repository.")
+        input("\nPress Enter to exit...")
+        return
 
-    # Поиск виртуального окружения
+    if not sync_branch(script_dir):
+        input("\nPress Enter to exit...")
+        return
+
     venv_name = find_virtual_env()
     if not venv_name:
         print(
@@ -62,7 +91,6 @@ def main():
         input("\nPress Enter to exit...")
         return
 
-    # Активация виртуального окружения и установка зависимостей
     activate_script = os.path.join(venv_name, "Scripts", "activate.bat")
     pip_path = os.path.join(venv_name, "Scripts", "pip.exe")
 
