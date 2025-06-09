@@ -4,6 +4,7 @@ from queue import Queue, Empty
 import tkinter as tk
 from tkinter import ttk
 
+from .widgets import HoverButton
 from ..icons import Icons
 from ...eventbus import Subscriber, EventBus, Event
 from ...enums import TERM, EventType, DispatcherType, ICON
@@ -70,14 +71,11 @@ class TermPanel(ttk.Frame):
             ("STOP", ICON.STOP_GRAY_16, self.on_stop_clicked)
         ]
         for key, icon, command in icons_map:
-            btn = tk.Button(
-                self, image=self.icons[icon], command=command, relief="flat",
+            btn = HoverButton(
+                self,
+                image=self.icons[icon], command=command,
                 background=self.widget_color,
-                activebackground="#c9c9c9",
-                borderwidth=1,
-                highlightthickness=2,
-                highlightcolor = self.widget_color,
-                highlightbackground = self.widget_color
+                activebackground="#c9c9c9"
             )
             btn.pack(side="right", padx=5, pady=3)
             self.buttons[key] = btn

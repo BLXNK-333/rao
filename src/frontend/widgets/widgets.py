@@ -409,7 +409,32 @@ class UndoText(tk.Text):
             pass
 
 
-class ToggleButton(tk.Button):
+class HoverButton(tk.Button):
+    def __init__(self, master=None, **kwargs):
+        self.default_bg = kwargs.pop("background", "#eff0f1")
+        self.hover_bg = kwargs.pop("activebackground", "#e7e7e7")
+
+        super().__init__(
+            master,
+            background=self.default_bg,
+            activebackground=self.hover_bg,
+            relief="flat",
+            borderwidth=0,
+            highlightthickness=0,
+            **kwargs
+        )
+
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+
+    def _on_enter(self, event):
+        self.configure(background=self.hover_bg)
+
+    def _on_leave(self, event):
+        self.configure(background=self.default_bg)
+
+
+class ToggleButton(HoverButton):
     """
     A custom toggle button that switches between two images (on/off state).
     Optionally accepts a callback function (passed as 'command' in kwargs)

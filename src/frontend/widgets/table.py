@@ -7,7 +7,7 @@ import tkinter.messagebox as messagebox
 from tkinter import ttk
 import tkinter.font as tkFont
 
-from .widgets import UndoEntry, ToggleButton
+from .widgets import UndoEntry, ToggleButton, HoverButton
 from ..icons import Icons
 from ...eventbus import Subscriber, EventBus, Event
 from ...enums import EventType, DispatcherType, GROUP, ICON, STATE
@@ -530,8 +530,12 @@ class TablePanel(ttk.Frame):
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
 
     def _create_btn(self, container: ttk.Frame, icon: ICON, command):
-        btn = tk.Button(container, image=self.icons[icon], command=command,
-                        relief="flat", activebackground="#e7e7e7")
+        btn = HoverButton(
+            container,
+            image=self.icons[icon],
+            command=command,
+            activebackground="#e7e7e7"  # Можно задать любой цвет для hover
+        )
         btn.pack(side="left", padx=2)
         return btn
 
@@ -556,7 +560,7 @@ class TablePanel(ttk.Frame):
             image_off=self.icons[ICON.AUTO_SIZE_OFF_24],
             initial_state=False,
             command=self.on_auto_size_applied,
-            relief="flat", activebackground="#e7e7e7"
+            activebackground="#e7e7e7"
         )
 
         auto_size_btn.pack(side="left", padx=2)

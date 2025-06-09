@@ -7,5 +7,6 @@ from .widgets import (
     ScrolledFrame,
     UndoEntry,
     UndoText,
-    ToggleButton
+    ToggleButton,
+    HoverButton
 )
