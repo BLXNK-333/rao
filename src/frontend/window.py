@@ -17,9 +17,7 @@ class Window(tk.Tk, BaseWindow):
         self.title("PAO")
         self.geometry("800x600")
         self.protocol("WM_DELETE_WINDOW", self.close)
-
-        if sys.platform == "win32":
-            self.iconbitmap(Path(__file__).resolve().parents[2] / "rao.ico")
+        self._set_icon()
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
@@ -70,6 +68,19 @@ class Window(tk.Tk, BaseWindow):
         # переключение размеров терминала.
         self.subscribe()
         self.center_window()
+
+    def _set_icon(self):
+        """
+        Sets the application window icon on Windows platforms.
+        This function has no effect on non-Windows platforms.
+        """
+        if sys.platform == "win32":
+            if getattr(sys, "frozen", False):
+                icon_path = Path(sys._MEIPASS) / "rao.ico"
+            else:
+                icon_path = Path(__file__).resolve().parents[2] / "rao.ico"
+
+            self.iconbitmap(icon_path)
 
     def display_terminal(self):
         self.terminal.grid(row=2, column=0, sticky="nsew")

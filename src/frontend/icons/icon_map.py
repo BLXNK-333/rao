@@ -1,6 +1,7 @@
-import tkinter as tk
+import sys
 from pathlib import Path
-import base64
+
+import tkinter as tk
 
 from ...enums import ICON
 
@@ -55,7 +56,7 @@ class Icons:
         """
 
         if not self._loaded:
-            self._icons_dir = Path(__file__).parent
+            self._icons_dir = self._get_icon_dir()
             self._map = {}
             self._load_icons()
             self._loaded = True
@@ -69,3 +70,9 @@ class Icons:
     def __getitem__(self, icon: ICON) -> tk.PhotoImage:
         """Return the PhotoImage for the given icon."""
         return self._map.get(icon)
+
+    @staticmethod
+    def _get_icon_dir() -> Path:
+        if getattr(sys, "frozen", False):
+            return Path(sys._MEIPASS) / "src" / "frontend" / "icons"
+        return Path(__file__).parent
