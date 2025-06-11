@@ -27,11 +27,13 @@ def bootstrap():
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
     monthly_path_state = backend.sync_db.get_state(STATE.MONTHLY_PATH)
     quarterly_path_state = backend.sync_db.get_state(STATE.QUARTERLY_PATH)
+    window_geometry_state = backend.sync_db.get_state(STATE.WINDOW_GEOMETRY)
+    print(window_geometry_state)
 
     # -------------------------------
     # UI initialization
     # -------------------------------
-    window = Window()
+    window = Window(geometry=window_geometry_state)
     icons = Icons()
     UIStyles(window)
     apply_global_bindings(window)

@@ -66,6 +66,7 @@ class STATE(str, Enum):
     REPORT_COL_SIZE = "report_col_size"
     MONTHLY_PATH = "monthly_path"
     QUARTERLY_PATH = "quarterly_path"
+    WINDOW_GEOMETRY = "window_geometry"
 
 
 class EventType:
@@ -145,6 +146,7 @@ class EventType:
 
         class UI:
             CLOSE_WINDOW = "VIEW.UI.CLOSE_WINDOW"
+            WINDOW_RESIZED = "VIEW.UI.WINDOW_RESIZED"
 
     # PLACEHOLDER
     FAKE_EVENT = "FAKE_EVENT"

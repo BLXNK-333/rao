@@ -8,16 +8,21 @@ from tkinter import ttk, messagebox
 from .widgets import BaseWindow, TopMenu, Terminal, CardManager
 
 from ..eventbus import EventBus, Subscriber, Event
-from ..enums import TERM, EventType, DispatcherType
+from ..enums import TERM, EventType, DispatcherType, STATE
 
 
 class Window(tk.Tk, BaseWindow):
-    def __init__(self):
+    def __init__(self, geometry: Optional[str] = None):
         super().__init__()
         self.title("PAO")
-        self.geometry("800x600")
+        self.geometry(geometry or "800x600")
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._set_icon()
+
+        # Параметры для сохранения состояния размера окна
+        self._last_geometry = geometry
+        self._resize_after_id = None  # <--- таймер after для дебаунса
+        self.bind("<Configure>", self._on_configure)
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
@@ -68,6 +73,26 @@ class Window(tk.Tk, BaseWindow):
         # переключение размеров терминала.
         self.subscribe()
         self.center_window()
+
+    def _on_configure(self, event):
+        if event.widget is not self:
+            return
+
+        if self._resize_after_id:
+            self.after_cancel(self._resize_after_id)
+
+        self._resize_after_id = self.after(2000, lambda: self._on_resize_debounced())
+
+    def _on_resize_debounced(self):
+        self._resize_after_id = None
+        current_geometry = self.geometry()
+
+        if current_geometry != self._last_geometry:
+            self._last_geometry = current_geometry
+            EventBus.publish(
+                Event(event_type=EventType.VIEW.UI.WINDOW_RESIZED),
+                STATE.WINDOW_GEOMETRY, current_geometry
+            )
 
     def _set_icon(self):
         """
