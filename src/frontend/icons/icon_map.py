@@ -39,7 +39,9 @@ class Icons:
         ICON.TERM_LARGE_DARK_16: "square-l-dark-16.png",
         ICON.CLOSE_16: "cross-16.png",
 
-        ICON.FOLDER_16: "folder-open-16.png"
+        ICON.FOLDER_16: "folder-open-16.png",
+        ICON.PIN_ON_24: "pin-on-24.png",
+        ICON.PIN_OFF_24: "pin-off-24.png"
     }
     _instance = None
     _loaded = False

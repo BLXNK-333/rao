@@ -28,7 +28,6 @@ def bootstrap():
     monthly_path_state = backend.sync_db.get_state(STATE.MONTHLY_PATH)
     quarterly_path_state = backend.sync_db.get_state(STATE.QUARTERLY_PATH)
     window_geometry_state = backend.sync_db.get_state(STATE.WINDOW_GEOMETRY)
-    print(window_geometry_state)
 
     # -------------------------------
     # UI initialization

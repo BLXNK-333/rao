@@ -31,6 +31,8 @@ class ICON(str, Enum):
     CLOSE_16 = "close_16"
 
     FOLDER_16 = "folder_16"
+    PIN_ON_24 = "pin_on_24"
+    PIN_OFF_24 = "pin_off_24"
 
 
 class CONFIGKEYS(str, Enum):

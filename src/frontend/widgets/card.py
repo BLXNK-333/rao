@@ -6,9 +6,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List, Dict, Callable
 
-from .widgets import BaseWindow, ScrolledFrame, UndoText
+from .widgets import BaseWindow, ScrolledFrame, UndoText, ToggleButton
+from ..icons import Icons
 from ...eventbus import Event, EventBus, Subscriber
-from ...enums import EventType, DispatcherType, HEADER
+from ...enums import EventType, DispatcherType, HEADER, ICON
 
 
 class CardFields(ttk.Frame):
@@ -129,21 +130,41 @@ class CardFields(ttk.Frame):
 class CardButtons(ttk.Frame):
     def __init__(self, parent: ttk.Frame, editor: "CardEditor"):
         super().__init__(parent)
+        self._icons = Icons()
         self.editor = editor
-        self.pack(fill="x", anchor="center", pady=10)
+        self.pin_btn = None
         self.save_btn = None
         self.cancel_btn = None
+
         self._create_bottom_buttons()
 
-    def _create_bottom_buttons(self):
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(anchor="center")
+        # Вся панель кнопок внизу
+        self.pack(fill="x", pady=10)
 
-        self.save_btn = ttk.Button(btn_frame, text="Сохранить", command=self.editor.on_save)
+    def _create_bottom_buttons(self):
+        # Слева пин-кнопка
+        self.pin_btn = ToggleButton(
+            self,
+            image_on=self._icons[ICON.PIN_ON_24],
+            image_off=self._icons[ICON.PIN_OFF_24],
+            initial_state=False,
+            command=self.editor.toggle_pin
+        )
+        self.pin_btn.pack(side="left", padx=10)
+
+        # Справа фрейм, занимающий всё остальное
+        btn_frame = ttk.Frame(self)
+        btn_frame.pack(side="left", fill="x", expand=True)
+
+        # Вложенный фрейм, для центрирования внутри btn_frame
+        inner = ttk.Frame(btn_frame)
+        inner.pack(anchor="center")
+
+        self.save_btn = ttk.Button(inner, text="Сохранить", command=self.editor.on_save)
         self.save_btn.pack(side="left", padx=5)
         self.save_btn.state(["disabled"])
 
-        self.cancel_btn = ttk.Button(btn_frame, text="Отмена", command=self.editor.on_close)
+        self.cancel_btn = ttk.Button(inner, text="Отмена", command=self.editor.on_close)
         self.cancel_btn.pack(side="left", padx=5)
 
     def set_save_button_enabled(self, enabled: bool):
@@ -174,6 +195,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.card_key = card_key
         self.table = table
         self.is_new = not any(data.values())
+        self._pinned = False
 
         # Основной контейнер
         self.scrolled = ScrolledFrame(self)
@@ -220,6 +242,14 @@ class CardEditor(tk.Toplevel, BaseWindow):
             self.fields.clear_field_highlight()
         if self.get_id() or self.is_new:
             self.buttons.set_save_button_enabled(state)
+
+    def toggle_pin(self):
+        """Переключает режим 'поверх всех окон'."""
+        self._pinned = not self._pinned
+        try:
+            self.attributes("-topmost", self._pinned)
+        except Exception:
+            pass  # если editor не поддерживает (в rare case)
 
 
 class CardManager:
