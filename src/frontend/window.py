@@ -8,23 +8,17 @@ from tkinter import ttk, messagebox
 from .widgets import BaseWindow, TopMenu, Terminal, CardManager
 
 from ..eventbus import EventBus, Subscriber, Event
-from ..enums import TERM, EventType, DispatcherType, STATE
+from ..enums import TERM, EventType, DispatcherType
 
 
 class Window(tk.Tk, BaseWindow):
-    def __init__(self, geometry: Optional[dict] = None):
+    def __init__(self, geometry: str = "800x600"):
         super().__init__()
         self.withdraw()
         self.title("PAO")
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._set_icon()
-
-        # Параметры для сохранения состояния размера окна
-        self._last_geometry = (geometry or {}).get("geometry", "800x600")
-        self._normal_geometry = (geometry or {}).get("normal_geometry", self._last_geometry)
-        self._is_zoomed = (geometry or {}).get("zoomed", False)
-        self._resize_after_id = None  # <--- таймер after для дебаунса
-        self.bind("<Configure>", self._on_configure)
+        self._geometry = geometry
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
@@ -43,6 +37,7 @@ class Window(tk.Tk, BaseWindow):
 
         # Нужен для управления карточками перед закрытием
         self.card_manager: Optional[CardManager] = None
+        self.subscribe()
 
     def subscribe(self):
         handlers = {
@@ -71,46 +66,7 @@ class Window(tk.Tk, BaseWindow):
                 self.hide_frame()
             self.display_terminal()
 
-        # Подписку сделал тут, после всех размещений, иначе подтормаживает
-        # переключение размеров терминала.
-        self.subscribe()
-
-        if sys.platform == "win32" and self._is_zoomed:
-            self.state("zoomed")
-        else:
-            self.show_centered(geometry=self._last_geometry)
-
-    def _on_configure(self, event):
-        if event.widget is not self:
-            return
-
-        if self._resize_after_id:
-            self.after_cancel(self._resize_after_id)
-
-        self._resize_after_id = self.after(1000, lambda _=None: self._on_resize_debounced())
-
-    def _on_resize_debounced(self):
-        self._resize_after_id = None
-
-        current_geometry = self.geometry()
-        is_zoomed = self.state() == "zoomed"
-
-        if current_geometry != self._last_geometry or self._is_zoomed != is_zoomed:
-            if not is_zoomed:
-                self._normal_geometry = current_geometry  # сохранить обычную геометрию
-
-            self._last_geometry = current_geometry
-            self._is_zoomed = is_zoomed
-
-            EventBus.publish(
-                Event(event_type=EventType.VIEW.UI.WINDOW_RESIZED),
-                STATE.WINDOW_GEOMETRY,
-                {
-                    "geometry": current_geometry,
-                    "normal_geometry": self._normal_geometry,
-                    "zoomed": is_zoomed
-                }
-            )
+        self.show_centered(geometry=self._geometry)
 
     def _set_icon(self):
         """
