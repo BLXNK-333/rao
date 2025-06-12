@@ -140,7 +140,7 @@ class ExportSection(ttk.Frame):
     def _debounced_path_change(self, *_):
         if self._debounce_after_id:
             self.after_cancel(self._debounce_after_id)
-        self._debounce_after_id = self.after(500, lambda: self._publish_path_change())
+        self._debounce_after_id = self.after(500, lambda _=None: self._publish_path_change())
 
     def _publish_path_change(self):
         current = self.variables["path"].get()

@@ -1,3 +1,4 @@
+from typing import cast
 import sys
 from pathlib import Path
 
@@ -76,5 +77,8 @@ class Icons:
     @staticmethod
     def _get_icon_dir() -> Path:
         if getattr(sys, "frozen", False):
-            return Path(sys._MEIPASS) / "src" / "frontend" / "icons"
+            # Безопасный доступ к _MEIPASS, избегая ошибок типизации
+            meipass = cast(str, getattr(sys, "_MEIPASS", ""))
+            return Path(meipass) / "src" / "frontend" / "icons"
         return Path(__file__).parent
+

@@ -207,7 +207,7 @@ class TermLogger(ttk.Frame):
         self._configure_log_tags()
 
         # Start periodic log updates
-        self.after(50, lambda: self._update_log())
+        self.after(50, lambda _=None: self._update_log())
 
     def _clear_text(self):
         self.text.config(state="normal")  # Разрешаем редактирование
@@ -251,7 +251,7 @@ class TermLogger(ttk.Frame):
             pass
 
         # Schedule the next log update
-        self.after(50, lambda: self._update_log())
+        self.after(50, lambda _=None: self._update_log())
 
     def _write(self, msg: str, log_level: str) -> None:
         """

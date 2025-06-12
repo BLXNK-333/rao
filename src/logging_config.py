@@ -1,6 +1,5 @@
 import logging
 from queue import Queue
-from typing import Tuple
 
 
 class ClassNameFilter(logging.Filter):

@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Set, Union, Tuple, Optional
+from typing import List, Dict, Set, Tuple, Optional
 from datetime import datetime
 
 import tkinter as tk
@@ -213,7 +213,7 @@ class DataTable(ttk.Frame):
             self._sort_debounce_id = None
 
         self._sort_debounce_active = True
-        self._sort_debounce_id = self.after(300, lambda: self._debounced_sort_publish())
+        self._sort_debounce_id = self.after(300, lambda _=None: self._debounced_sort_publish())
 
     def _debounced_sort_publish(self):
         """Публикует событие сортировки с задержкой (дебаунс)."""
@@ -439,7 +439,7 @@ class DataTable(ttk.Frame):
         # задержка перед показом тултипа (в мс)
         self._heading_tooltip_after_id = self.after(
             500,
-            lambda: self._show_heading_tooltip(col_id, event.x_root + 12,
+            lambda _=None: self._show_heading_tooltip(col_id, event.x_root + 12,
                                                event.y_root + 10)
         )
 
@@ -595,13 +595,13 @@ class TablePanel(ttk.Frame):
             self.search_entry._var.set("")
 
     def clear_entry(self):
-        self.after(0, lambda: self._clear_entry())
+        self.after(0, lambda _=None: self._clear_entry())
 
     def _on_search(self, *args):
         term = self.search_var.get().lower()
         if self._debounce_id:
             self.after_cancel(self._debounce_id)
-        self._debounce_id = self.after(300, lambda: self.on_search(term))
+        self._debounce_id = self.after(300, lambda _=None: self.on_search(term))
 
     def on_search(self, term: str):
         EventBus.publish(

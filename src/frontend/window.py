@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import cast, Optional
 import sys
 from pathlib import Path
 
@@ -87,7 +87,7 @@ class Window(tk.Tk, BaseWindow):
         if self._resize_after_id:
             self.after_cancel(self._resize_after_id)
 
-        self._resize_after_id = self.after(1000, self._on_resize_debounced)
+        self._resize_after_id = self.after(1000, lambda _=None: self._on_resize_debounced())
 
     def _on_resize_debounced(self):
         self._resize_after_id = None
@@ -119,7 +119,8 @@ class Window(tk.Tk, BaseWindow):
         """
         if sys.platform == "win32":
             if getattr(sys, "frozen", False):
-                icon_path = Path(sys._MEIPASS) / "rao.ico"
+                meipass = cast(str, getattr(sys, "_MEIPASS", ""))
+                icon_path = Path(meipass) / "rao.ico"
             else:
                 icon_path = Path(__file__).resolve().parents[2] / "rao.ico"
 
@@ -189,4 +190,4 @@ class Window(tk.Tk, BaseWindow):
         EventBus.publish(Event(event_type=EventType.VIEW.UI.CLOSE_WINDOW))
 
     def close(self):
-        self.after(0, self._on_close)
+        self.after(0, lambda _=None: self._on_close())

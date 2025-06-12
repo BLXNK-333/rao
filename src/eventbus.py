@@ -42,7 +42,7 @@ class TkDispatcher(Dispatcher):
 
     def dispatch(self, callback: Callable, *args, **kwargs):
         """Schedule callback execution in Tkinter's main loop."""
-        self.tk.after(0, lambda: callback(*args, **kwargs))
+        self.tk.after(0, lambda _=None: callback(*args, **kwargs))
 
 
 class QueueDispatcher(Dispatcher):
