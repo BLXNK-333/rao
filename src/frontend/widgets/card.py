@@ -189,8 +189,8 @@ class CardEditor(tk.Toplevel, BaseWindow):
             data: Dict[str, str]
     ):
         super().__init__(parent)
+        self.withdraw()
         self.title("Редактировать карточку")
-        self.geometry(self.geometry_map.get(HEADER(table)))
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.card_key = card_key
         self.table = table
@@ -214,7 +214,8 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        self.center_window()
+        geometry = self.geometry_map.get(HEADER(table))
+        self.show_centered(geometry)
 
     def get_id(self):
         return self.fields.data.get("ID", "")

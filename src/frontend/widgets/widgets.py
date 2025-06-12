@@ -12,37 +12,36 @@ else:
 
 class BaseWindow(_WindowProto):
     """
-    BaseWindow is a mixin class that provides a utility method for centering
-    tkinter windows (both Tk and Toplevel) on the screen.
+    Mixin to center a Tk or Toplevel window on the screen.
 
-    This class assumes it will be used as a mixin alongside a tkinter widget
-    that implements geometry management methods (e.g., `geometry`,
-    `winfo_screenwidth`, etc.).
-
-    Example:
-        class MyWindow(tk.Toplevel, BaseWindow):
-            def __init__(self, parent):
-                super().__init__(parent)
-                self.center_window()
+    Provides the show_centered() method, which sets the window size and
+    positions it centered. If size is not provided, falls back to
+    self._last_geometry or defaults to two-thirds of the screen.
     """
 
-    def center_window(self):
+    def show_centered(self, geometry: str | None = None):
         """
-        Centers the window on the screen based on its current size.
+        Centers the window on the screen and shows it.
 
-        This method should be called after widgets are placed and
-        the layout is finalized to ensure correct size calculation.
+        Args:
+            geometry (str | None): Geometry string like 'WIDTHxHEIGHT', e.g. '500x400'.
+                                  If None, uses self._last_geometry or defaults to
+                                  two-thirds of the screen size.
         """
         self.update_idletasks()
-        geo = self.winfo_geometry()
-        size = geo.split("+")[0]
-        width, height = map(int, size.split("x"))
-
         scr_w = self.winfo_screenwidth()
         scr_h = self.winfo_screenheight()
+
+        if geometry is None:
+            width = scr_w * 2 // 3
+            height = scr_h * 2 // 3
+        else:
+            width, height = map(int, geometry.split("+")[0].split("x"))
+
         x = (scr_w - width) // 2
         y = (scr_h - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
+        self.deiconify()
 
 
 class ScrolledFrame(ttk.Frame):

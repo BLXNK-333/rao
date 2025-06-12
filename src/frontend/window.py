@@ -14,13 +14,13 @@ from ..enums import TERM, EventType, DispatcherType, STATE
 class Window(tk.Tk, BaseWindow):
     def __init__(self, geometry: Optional[str] = None):
         super().__init__()
+        self.withdraw()
         self.title("PAO")
-        self.geometry(geometry or "800x600")
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._set_icon()
 
         # Параметры для сохранения состояния размера окна
-        self._last_geometry = geometry
+        self._last_geometry = geometry or "800x600"
         self._resize_after_id = None  # <--- таймер after для дебаунса
         self.bind("<Configure>", self._on_configure)
 
@@ -72,7 +72,8 @@ class Window(tk.Tk, BaseWindow):
         # Подписку сделал тут, после всех размещений, иначе подтормаживает
         # переключение размеров терминала.
         self.subscribe()
-        self.center_window()
+
+        self.show_centered(geometry=self._last_geometry)
 
     def _on_configure(self, event):
         if event.widget is not self:
