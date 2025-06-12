@@ -21,6 +21,7 @@ class Window(tk.Tk, BaseWindow):
 
         # Параметры для сохранения состояния размера окна
         self._last_geometry = (geometry or {}).get("geometry", "800x600")
+        self._normal_geometry = (geometry or {}).get("normal_geometry", self._last_geometry)
         self._is_zoomed = (geometry or {}).get("zoomed", False)
         self._resize_after_id = None  # <--- таймер after для дебаунса
         self.bind("<Configure>", self._on_configure)
@@ -41,7 +42,7 @@ class Window(tk.Tk, BaseWindow):
         self.terminal = None                # (установить после через self.setup_layout)
 
         # Нужен для управления карточками перед закрытием
-        self.card_manager: CardManager = Optional[None]
+        self.card_manager: Optional[CardManager] = None
 
     def subscribe(self):
         handlers = {
@@ -74,9 +75,10 @@ class Window(tk.Tk, BaseWindow):
         # переключение размеров терминала.
         self.subscribe()
 
-        self.show_centered(geometry=self._last_geometry)
-        if self._is_zoomed:
+        if sys.platform == "win32" and self._is_zoomed:
             self.state("zoomed")
+        else:
+            self.show_centered(geometry=self._last_geometry)
 
     def _on_configure(self, event):
         if event.widget is not self:
@@ -85,14 +87,18 @@ class Window(tk.Tk, BaseWindow):
         if self._resize_after_id:
             self.after_cancel(self._resize_after_id)
 
-        self._resize_after_id = self.after(1000, lambda: self._on_resize_debounced())
+        self._resize_after_id = self.after(1000, self._on_resize_debounced)
 
     def _on_resize_debounced(self):
         self._resize_after_id = None
+
         current_geometry = self.geometry()
         is_zoomed = self.state() == "zoomed"
 
         if current_geometry != self._last_geometry or self._is_zoomed != is_zoomed:
+            if not is_zoomed:
+                self._normal_geometry = current_geometry  # сохранить обычную геометрию
+
             self._last_geometry = current_geometry
             self._is_zoomed = is_zoomed
 
@@ -101,6 +107,7 @@ class Window(tk.Tk, BaseWindow):
                 STATE.WINDOW_GEOMETRY,
                 {
                     "geometry": current_geometry,
+                    "normal_geometry": self._normal_geometry,
                     "zoomed": is_zoomed
                 }
             )
@@ -182,4 +189,4 @@ class Window(tk.Tk, BaseWindow):
         EventBus.publish(Event(event_type=EventType.VIEW.UI.CLOSE_WINDOW))
 
     def close(self):
-        self.after(0, lambda: self._on_close())
+        self.after(0, self._on_close)
