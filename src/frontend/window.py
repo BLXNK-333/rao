@@ -12,7 +12,7 @@ from ..enums import TERM, EventType, DispatcherType, STATE
 
 
 class Window(tk.Tk, BaseWindow):
-    def __init__(self, geometry: Optional[str] = None):
+    def __init__(self, geometry: Optional[dict] = None):
         super().__init__()
         self.withdraw()
         self.title("PAO")
@@ -20,7 +20,8 @@ class Window(tk.Tk, BaseWindow):
         self._set_icon()
 
         # Параметры для сохранения состояния размера окна
-        self._last_geometry = geometry or "800x600"
+        self._last_geometry = (geometry or {}).get("geometry", "800x600")
+        self._is_zoomed = (geometry or {}).get("zoomed", False)
         self._resize_after_id = None  # <--- таймер after для дебаунса
         self.bind("<Configure>", self._on_configure)
 
@@ -74,6 +75,8 @@ class Window(tk.Tk, BaseWindow):
         self.subscribe()
 
         self.show_centered(geometry=self._last_geometry)
+        if self._is_zoomed:
+            self.state("zoomed")
 
     def _on_configure(self, event):
         if event.widget is not self:
@@ -82,17 +85,24 @@ class Window(tk.Tk, BaseWindow):
         if self._resize_after_id:
             self.after_cancel(self._resize_after_id)
 
-        self._resize_after_id = self.after(2000, lambda: self._on_resize_debounced())
+        self._resize_after_id = self.after(1000, lambda: self._on_resize_debounced())
 
     def _on_resize_debounced(self):
         self._resize_after_id = None
         current_geometry = self.geometry()
+        is_zoomed = self.state() == "zoomed"
 
-        if current_geometry != self._last_geometry:
+        if current_geometry != self._last_geometry or self._is_zoomed != is_zoomed:
             self._last_geometry = current_geometry
+            self._is_zoomed = is_zoomed
+
             EventBus.publish(
                 Event(event_type=EventType.VIEW.UI.WINDOW_RESIZED),
-                STATE.WINDOW_GEOMETRY, current_geometry
+                STATE.WINDOW_GEOMETRY,
+                {
+                    "geometry": current_geometry,
+                    "zoomed": is_zoomed
+                }
             )
 
     def _set_icon(self):

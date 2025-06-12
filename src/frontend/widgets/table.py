@@ -137,7 +137,7 @@ class DataTable(ttk.Frame):
         self.dt.bind("<ButtonPress-1>", self._on_mouse_press)
         self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
         self.dt.bind("<Delete>", self._delete_selected_rows)
-        self.bind("<Configure>", self._resize_columns)
+        self.dt.bind("<Configure>", self._resize_columns)
 
         if self._enable_tooltips:
             self._bind_tooltip_events()

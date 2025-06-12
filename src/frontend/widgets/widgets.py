@@ -19,7 +19,7 @@ class BaseWindow(_WindowProto):
     self._last_geometry or defaults to two-thirds of the screen.
     """
 
-    def show_centered(self, geometry: str | None = None):
+    def show_centered(self, geometry: Optional[str] = None):
         """
         Centers the window on the screen and shows it.
 
