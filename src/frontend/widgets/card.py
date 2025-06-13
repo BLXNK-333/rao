@@ -194,7 +194,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.card_key = card_key
         self.table = table
-        self.is_new = not any(data.values())
+        self.is_new = not bool(data.get("ID"))
         self._pinned = False
 
         # Основной контейнер

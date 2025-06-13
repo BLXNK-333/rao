@@ -59,5 +59,11 @@ FIELD_MAPS = {
 }
 
 
+FIELD_MAPS_REVERSED = {
+    key: {v: k for k, v in field_map.items()}
+    for key, field_map in FIELD_MAPS.items()
+}
+
+
 def get_headers(header: HEADER):
     return list(DEFAULT_CARD_VALUES.get(header).keys())

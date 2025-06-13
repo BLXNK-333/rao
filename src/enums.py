@@ -68,6 +68,8 @@ class STATE(str, Enum):
     REPORT_COL_SIZE = "report_col_size"
     MONTHLY_PATH = "monthly_path"
     QUARTERLY_PATH = "quarterly_path"
+    SONGS_SORT = "songs_sort"
+    REPORT_SORT = "report_sort"
 
 
 class EventType:

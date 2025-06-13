@@ -19,6 +19,11 @@ class DataTable(ttk.Frame):
         GROUP.REPORT_TABLE: STATE.REPORT_COL_SIZE
     }
 
+    sort_states_map = {
+        GROUP.SONGS_TABLE: STATE.SONGS_SORT,
+        GROUP.REPORT_TABLE: STATE.REPORT_SORT
+    }
+
     # region Initialization and Subscriptions
 
     def __init__(
@@ -26,12 +31,13 @@ class DataTable(ttk.Frame):
             parent,
             group_id: GROUP,
             enable_tooltips: bool = False,
-            show_table_end: bool = False
+            show_table_end: bool = False,
+            sort_key: Optional[Tuple[int, str, int]] = None
     ):
         super().__init__(parent)
 
-        self._group_id = group_id
-        self._dt = None
+        self._group_id = group_id.value
+        self.dt = None
         self._enable_tooltips = enable_tooltips
         self._headers: List[str] = []
         self._stretchable_column_indices: Set[int] = set()
@@ -46,7 +52,7 @@ class DataTable(ttk.Frame):
 
         # Текущее состояние сортировки: (column_name, direction),
         # где direction = 1 (▲), -1 (▼), 0 (нет)
-        self._current_sort: Optional[Tuple[str, int]] = None
+        self._sort_key = sort_key
         self._sort_debounce_id = None
         self._sort_debounce_active = False
 
@@ -127,7 +133,11 @@ class DataTable(ttk.Frame):
         """Настройка заголовков колонок и их событий."""
         self.dt.config(columns=self._headers)
         for idx, col in enumerate(self._headers):
-            self.dt.heading(col, text=col, command=lambda c=col: self.on_header_click(c))
+            self.dt.heading(
+                col,
+                text=col,
+                command=lambda i=idx, c=col: self.on_header_click(i, c)
+            )
             self.dt.column(col, anchor="w", width=100, stretch=False)
 
     def _apply_bindings(self):
@@ -174,35 +184,38 @@ class DataTable(ttk.Frame):
                 self._publish_cols_state()
             self._resize_columns()
 
-    def on_header_click(self, column: str):
+    def on_header_click(self, col_index: int, col_name: str):
         """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""
-        self.after(0, lambda col=column: self._on_header_click(col))
+        self.after(0, lambda i=col_index, c=col_name: self._on_header_click(i, c))
 
-    def _on_header_click(self, column: str):
-        """Обработка клика по заголовку колонки, переключение сортировки."""
-        prev_col, prev_dir = self._current_sort if self._current_sort else (None, 0)
+    def _set_arrow(self, col_index: int, col_name: str):
+        prev_idx, prev_name, prev_dir = self._sort_key if self._sort_key else (-1, "", 0)
 
-        if column != prev_col:
+        if col_name != prev_name:
             # Сбрасываем предыдущую стрелку
-            if prev_col:
-                self.dt.heading(prev_col, text=prev_col)
+            if prev_name:
+                self.dt.heading(prev_name, text=prev_name)
 
             # Устанавливаем новую сортировку: сначала ▲
-            self._current_sort = (column, 1)
-            self.dt.heading(column, text=f"▲ {column}")
+            self._sort_key = (col_index, col_name, 1)
+            self.dt.heading(col_name, text=f"▲ {col_name}")
         else:
             if prev_dir == 1:
                 # ▲ → ▼
-                self._current_sort = (column, -1)
-                self.dt.heading(column, text=f"▼ {column}")
+                self._sort_key = (col_index, col_name, -1)
+                self.dt.heading(col_name, text=f"▼ {col_name}")
             elif prev_dir == -1:
                 # ▼ → убрать сортировку
-                self._current_sort = None
-                self.dt.heading(column, text=column)
+                self._sort_key = None
+                self.dt.heading(col_name, text=col_name)
             else:
                 # Нет сортировки → ▲
-                self._current_sort = (column, 1)
-                self.dt.heading(column, text=f"▲ {column}")
+                self._sort_key = (col_index, col_name, 1)
+                self.dt.heading(col_name, text=f"▲ {col_name}")
+
+    def _on_header_click(self, col_index: int, col_name: str):
+        """Обработка клика по заголовку колонки, переключение сортировки."""
+        self._set_arrow(col_index, col_name)
 
         # Дебаунс
         if self._sort_debounce_id is not None and self._sort_debounce_active:
@@ -219,17 +232,18 @@ class DataTable(ttk.Frame):
         """Публикует событие сортировки с задержкой (дебаунс)."""
         self._sort_debounce_active = False
         self._sort_debounce_id = None
+        state = self.sort_states_map.get(self._group_id)
+
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED,
                   group_id=self._group_id),
-            *self._get_sort_state()
+            state, self._get_sort_state()
         )
 
     def _get_sort_state(self) -> Tuple[int, str, int]:
         """Возвращает текущее состояние сортировки: (индекс, имя колонки, направление)."""
-        if self._current_sort:
-            col_name, direction = self._current_sort
-            return self._headers.index(col_name), col_name, direction
+        if self._sort_key:
+            return self._sort_key
         return -1, "", 0
 
     # endregion
@@ -495,9 +509,13 @@ class DataTable(ttk.Frame):
 class TablePanel(ttk.Frame):
     # ICON COLOR = #29B6F6
 
-    def __init__(self, parent: ttk.Frame, group_id: GROUP):
+    def __init__(
+            self,
+            parent: ttk.Frame,
+            group_id: GROUP,
+    ):
         super().__init__(parent)
-        self._group_id = group_id
+        self._group_id = group_id.value
         self.search_var = tk.StringVar()
         self._debounce_id = None
         self.buttons = {}
@@ -631,11 +649,18 @@ class TablePanel(ttk.Frame):
 
 
 class TableBuffer:
-    def __init__(self, group_id: GROUP, max_history: int = 10):
-        self._group_id = group_id
-        self.original_data: Dict[str, List[str]] = {}
+    def __init__(
+            self,
+            group_id: GROUP,
+            original_data: Dict[str, List[str]],
+            header_map: Dict[str, str],
+            sort_key: Optional[Tuple[int, str, int]] = None,
+            max_history: int = 10
+    ):
+        self._group_id = group_id.value
+        self.original_data = original_data
+        self.header_map = header_map
         self.sorted_keys: List[str] = []  # Отсортированные ключи
-        self.header_map: Dict[str, str] = {}
 
         self.max_history = max_history
         self.history: List[Tuple[str, List[str]]] = []  # (term, list_of_keys)
@@ -643,8 +668,13 @@ class TableBuffer:
         self._logger = logging.getLogger(__name__)
 
         # Текущие параметры сортировки и фильтрации
-        self.current_sort: Tuple[int, str, int] = (0, "", 0)  # (column_idx, column_name, direction)
-        self.current_filter_term: str = ""
+        self.sort_key = sort_key or (0, "", 0)  # (column_idx, column_name, direction)
+        self.filter_term: str = ""
+
+        if sort_key and sort_key[1] != "":
+            self.sort_data(None, sort_key)
+        else:
+            self.sorted_keys = list(original_data.keys())
 
         self.subscribe()
 
@@ -666,7 +696,7 @@ class TableBuffer:
 
     def filter_data(self, term: str):
         term = term.strip().lower()
-        self.current_filter_term = term  # сохраняем текущий фильтр
+        self.filter_term = term  # сохраняем текущий фильтр
 
         base_keys = self.sorted_keys.copy()
 
@@ -692,7 +722,7 @@ class TableBuffer:
                 event_type=EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE,
                 group_id=self._group_id
             ),
-            data, self.current_filter_term == ""
+            data, self.filter_term == ""
         )
 
     def _update_history(self, term: str, keys: List[str]):
@@ -700,9 +730,11 @@ class TableBuffer:
         if len(self.history) > self.max_history:
             self.history.pop(0)
 
-    def sort_data(self, column_idx: int, column_name: str, direction: int):
-        self.current_sort = (column_idx, column_name, direction)
-        term = self.current_filter_term
+    def sort_data(self, _state_name, sort_data: Tuple[int, str, int]):
+        """"""
+        column_idx, column_name, direction = sort_data
+        self.sort_key = (column_idx, column_name, direction)
+        term = self.filter_term
 
         try:
             keys = list(self.original_data.keys())
@@ -724,7 +756,7 @@ class TableBuffer:
         card_id = row[0]
         self.original_data[card_id] = row
 
-        term = self.current_filter_term.strip().lower()
+        term = self.filter_term.strip().lower()
         is_match = self._passes_filter(row)
 
         try:
@@ -783,7 +815,7 @@ class TableBuffer:
 
     def _find_insert_position(self, card_id: str, was_present: bool,
                               old_pos: Optional[int] = None) -> int:
-        column_idx, column_name, direction = self.current_sort
+        column_idx, column_name, direction = self.sort_key
 
         if direction == 0:
             return old_pos if was_present and old_pos is not None else len(self.sorted_keys)
@@ -854,7 +886,7 @@ class TableBuffer:
         return primary_key, id_key
 
     def _passes_filter(self, row: List[str]) -> bool:
-        term = self.current_filter_term.strip().lower()
+        term = self.filter_term.strip().lower()
         return not term or any(term in cell.lower() for cell in row)
 
 
@@ -866,15 +898,22 @@ class Table(ttk.Frame):
             header_map: Dict[str, str],
             data: List[List[str]],
             stretchable_column_indices: List[int],
-            prev_cols_state: Dict[str, int],
             enable_tooltips: bool,
-            show_table_end: bool
+            show_table_end: bool,
+            prev_cols_state: Optional[Dict[str, int]] = None,
+            sort_key_state: Optional[Tuple[int, str, int]] = None
     ):
         super().__init__(parent)
         self._setup_layout()
 
+        # Configure
+        self.group_id = group_id.value
+        ROWS_DICT = {row[0]: list(row) for row in data}
+        HEADER_LIST = list(header_map.keys())
+        prev_cols_state = prev_cols_state or {}
+        sort_key = sort_key_state
+
         # Init
-        self.group_id = group_id
         self.table_panel = TablePanel(
             parent=self,
             group_id=group_id
@@ -883,16 +922,19 @@ class Table(ttk.Frame):
             parent=self,
             group_id=group_id,
             enable_tooltips=enable_tooltips,
-            show_table_end=show_table_end
+            show_table_end=show_table_end,
+            sort_key=sort_key
         )
-        self.buffer = TableBuffer(group_id=group_id)
+        self.buffer = TableBuffer(
+            group_id=group_id,
+            original_data=ROWS_DICT,
+            header_map=header_map,
+            sort_key=sort_key
+        )
 
-        # Configure
-        SONGS_DICT = {row[0]: list(row) for row in data}
-        HEADER_LIST = list(header_map.keys())
-        self.buffer.original_data = SONGS_DICT
-        self.buffer.header_map = header_map
-        self.buffer.sorted_keys = list(SONGS_DICT.keys())
+        if sort_key and sort_key[1] != "":
+            data = [ROWS_DICT[k] for k in self.buffer.sorted_keys]
+
         self.data_table.estimated_column_widths = self._estimate_column_lengths(HEADER_LIST, data)
 
         self.data_table.create_table(
@@ -901,9 +943,8 @@ class Table(ttk.Frame):
             stretchable_column_indices=stretchable_column_indices
         )
 
-        if prev_cols_state is None:
+        if not prev_cols_state:
             self.table_panel.on_auto_size_applied()
-            prev_cols_state = {}
 
         elif self.data_table.user_defined_widths != prev_cols_state:
             self.table_panel.on_manual_size()
@@ -912,6 +953,11 @@ class Table(ttk.Frame):
 
         # Scroll to the table bottom
         self.data_table.scroll_to_bottom(rows=data, is_full=True)
+
+        if sort_key and sort_key[1] != "":
+            prev = {0: -1, 1: 0, -1: 1}
+            self.data_table._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
+            self.data_table._set_arrow(sort_key[0], sort_key[1])
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:

@@ -27,6 +27,8 @@ def bootstrap():
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
     monthly_path_state = backend.sync_db.get_state(STATE.MONTHLY_PATH)
     quarterly_path_state = backend.sync_db.get_state(STATE.QUARTERLY_PATH)
+    songs_table_sort_state = backend.sync_db.get_state(STATE.SONGS_SORT)
+    report_table_sort_state = backend.sync_db.get_state(STATE.REPORT_SORT)
 
     # -------------------------------
     # UI initialization
@@ -45,10 +47,11 @@ def bootstrap():
         header_map=FIELD_MAPS.get(HEADER.SONGS),
         data=all_songs_list,
         stretchable_column_indices=[1, 2, 4, 5, 6],
-        prev_cols_state=songs_table_cols_state,
         enable_tooltips=False,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
-        show_table_end=False
+        show_table_end=False,
+        prev_cols_state=songs_table_cols_state,
+        sort_key_state=songs_table_sort_state
     )
 
     report = Table(
@@ -57,9 +60,10 @@ def bootstrap():
         header_map=FIELD_MAPS.get(HEADER.REPORT),
         data=all_report_list,
         stretchable_column_indices=[3, 4, 7, 8, 12],
-        prev_cols_state=report_table_cols_state,
         enable_tooltips=True,
-        show_table_end=True
+        show_table_end=True,
+        prev_cols_state=report_table_cols_state,
+        sort_key_state=report_table_sort_state
     )
     export = Export(
         parent=window.content,

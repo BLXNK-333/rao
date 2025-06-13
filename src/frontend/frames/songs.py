@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Tuple
 
 import tkinter as tk
 from tkinter import messagebox
@@ -16,13 +16,14 @@ class SongsTable(Table):
             header_map: Dict[str, str],
             data: List[List[str]],
             stretchable_column_indices: List[int],
-            prev_cols_state: Dict[str, int],
             enable_tooltips: bool,
             default_report_values: Dict[str, Any],
-            show_table_end: bool
+            show_table_end: bool,
+            prev_cols_state: Optional[Dict[str, int]] = None,
+            sort_key_state: Optional[Tuple[str, int, str]] = None
     ):
         super().__init__(parent, group_id, header_map, data, stretchable_column_indices,
-                         prev_cols_state, enable_tooltips, show_table_end)
+                         enable_tooltips, show_table_end, prev_cols_state, sort_key_state)
 
         self._default_report_values = default_report_values
         self._create_add_to_report_button()

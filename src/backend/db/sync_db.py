@@ -3,6 +3,7 @@ from typing import Dict, List, Any, Union
 from .database import Database
 from .adapter import TableAdapter
 from .validator import DataValidator
+from .order_map import FIELD_MAPS, FIELD_MAPS_REVERSED
 from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE
 from ...eventbus import Event, Subscriber, EventBus
 from ...entities import MonthReport, QuarterReport
@@ -30,7 +31,8 @@ class SyncDB:
             (EventType.VIEW.TABLE.DT.MANUAL_COL_SIZE, self.set_state),
             (EventType.VIEW.TABLE.DT.AUTO_COL_SIZE, self.set_state),
             (EventType.VIEW.EXPORT.PATH_CHANGED, self.set_state),
-            (EventType.VIEW.EXPORT.GENERATE_REPORT, self.get_report)
+            (EventType.VIEW.EXPORT.GENERATE_REPORT, self.get_report),
+            (EventType.VIEW.TABLE.DT.SORT_CHANGED, self.set_state)
         ]
 
         for event, handler in handlers:
@@ -101,22 +103,44 @@ class SyncDB:
         )
 
     def delete_card(self, deleted_ids: List[str], table_name: str):
-        self.db.delete_card(deleted_ids, table_name)
+        self.db.delete_card(deleted_ids, str(table_name))
 
     def get_state(self, state_name: STATE):
         state = self.db.get_state(state_name)
+
         if state and state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
-            table_name = HEADER(state_name.value.split("_")[0])
+            table_name = self._extract_table_name(state_name)
             adapter = self.adapters.get(table_name)
             state = adapter.to_view(db_row=state, transform=False)
+
+        elif state_name in (STATE.SONGS_SORT, STATE.REPORT_SORT):
+            if state is None:
+                return None
+            if state[1] != "":
+                table_name = self._extract_table_name(state_name)
+                col_name = FIELD_MAPS_REVERSED[table_name][state[1]]
+                state[1] = col_name
+            state = tuple(state)
+
         return state
 
     def set_state(self, state_name: STATE, data: Any):
         if state_name in (STATE.SONGS_COL_SIZE, STATE.REPORT_COL_SIZE):
-            table_name = HEADER(state_name.value.split("_")[0])
+            table_name = self._extract_table_name(state_name)
             adapter = self.adapters.get(table_name)
             data = adapter.to_db(ui_row=data, transform=False)
+
+        elif state_name in (STATE.SONGS_SORT, STATE.REPORT_SORT):
+            if data[1] != "":
+                table_name = self._extract_table_name(state_name)
+                col_name = FIELD_MAPS[table_name][data[1]]
+                data = [data[0], col_name, data[2]]
+
         self.db.set_state(str(state_name.value), data)
 
     def close_connection(self):
         self.db.close()
+
+    @staticmethod
+    def _extract_table_name(state_name: STATE) -> HEADER:
+        return HEADER(state_name.value.split("_")[0])
