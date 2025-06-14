@@ -15,12 +15,20 @@ def patch_eventbus_publish():
 
 @pytest.fixture
 def table_buffer():
-    return TableBuffer(group_id=GROUP.SONGS_TABLE)
-
+    return TableBuffer(
+        group_id=GROUP.SONGS_TABLE,
+        original_data={},
+        header_map={}
+    )
 
 @pytest.fixture
 def buffer_for_sort_tests():
-    return TableBuffer(group_id=GROUP.SONGS_TABLE)
+    return TableBuffer(
+        group_id=GROUP.SONGS_TABLE,
+        original_data={},
+        header_map={}
+    )
+
 
 
 def test_initial_state(table_buffer):
@@ -29,14 +37,14 @@ def test_initial_state(table_buffer):
     assert table_buffer.sorted_keys == []
     assert table_buffer.history == []
     assert table_buffer.max_history == 10
-    assert table_buffer.current_sort == (0, "", 0)
-    assert table_buffer.current_filter_term == ""
+    assert table_buffer.sort_key == (0, "", 0)
+    assert table_buffer.filter_term == ""
 
 
 @patch("src.frontend.widgets.table.EventBus.subscribe")
 @patch("src.frontend.widgets.table.EventBus.publish")
 def test_subscribe_called(mock_publish, mock_subscribe):
-    TableBuffer(group_id=GROUP.SONGS_TABLE)
+    TableBuffer(group_id=GROUP.SONGS_TABLE, original_data={}, header_map={})
 
     assert mock_subscribe.call_count == 4  # ✅ Проверка, что было ровно 4 подписки
 
@@ -84,7 +92,7 @@ def test_sort_data_string_column(table_buffer):
         "1": ["b", "2"],
         "2": ["a", "1"]
     }
-    table_buffer.sort_data(0, "Name", 1)
+    table_buffer.sort_data(None, (0, "Name", 1))
     assert table_buffer.sorted_keys == ["2", "1"]
 
 
@@ -93,7 +101,7 @@ def test_sort_data_numeric_column(table_buffer):
         "1": ["5", "x"],
         "2": ["2", "y"]
     }
-    table_buffer.sort_data(0, "ID", 1)
+    table_buffer.sort_data(None, (0, "ID", 1))
     assert table_buffer.sorted_keys == ["2", "1"]
 
 
@@ -103,14 +111,14 @@ def test_sort_data_handles_exception(table_buffer):
         "2": ["xyz"]
     }
     # column index out of range
-    table_buffer.sort_data(3, "ID", 1)
+    table_buffer.sort_data(None, (3, "ID", 1))
     assert set(table_buffer.sorted_keys) == set(["1", "2"])
 
 
 def test_update_item_sorts_and_publishes(table_buffer, patch_eventbus_publish):
     pub_mock, _ = patch_eventbus_publish
     table_buffer.original_data = {}
-    table_buffer.current_sort = (0, "ID", 1)
+    table_buffer.sort_key = (0, "ID", 1)
 
     table_buffer.update_item(["42", "Hello"])
     assert "42" in table_buffer.original_data
@@ -205,9 +213,9 @@ def test_sort_clears_history(table_buffer):
         "1": ["a", "x"],
         "2": ["b", "y"]
     }
-    table_buffer.current_filter_term = "a"
+    table_buffer.filter_term = "a"
 
-    table_buffer.sort_data(0, "Name", 1)
+    table_buffer.sort_data(None, (0, "Name", 1))
 
     # История должна быть очищена, а потом заполнена новым фильтром 'a'
     assert len(table_buffer.history) == 1
@@ -264,7 +272,7 @@ def test_find_insert_position_no_sort(buffer_for_sort_tests):
         "2": ["2", "bbb"]
     }
     buf.sorted_keys = ["1", "2"]
-    buf.current_sort = (0, "ID", 0)  # no sort
+    buf.sort_key = (0, "ID", 0)  # no sort
 
     # Добавим новый элемент
     buf.original_data["3"] = ["3", "ccc"]
@@ -280,7 +288,7 @@ def test_find_insert_position_sorted(buffer_for_sort_tests):
         "3": ["15", "ccc"]
     }
     buf.sorted_keys = ["1", "2"]
-    buf.current_sort = (0, "ID", 1)
+    buf.sort_key = (0, "ID", 1)
 
     pos = buf._find_insert_position("3", was_present=False)
     assert pos == 1  # между 10 и 20
@@ -294,7 +302,7 @@ def test_insert_sorted_key(buffer_for_sort_tests):
         "3": ["15", "ccc"]
     }
     buf.sorted_keys = ["1", "2"]
-    buf.current_sort = (0, "ID", 1)
+    buf.sort_key = (0, "ID", 1)
 
     buf._insert_sorted_key("3")
     assert buf.sorted_keys == ["1", "3", "2"]
@@ -307,7 +315,7 @@ def test_find_insert_position_no_sort_existing_key(buffer_for_sort_tests):
         "2": ["2", "bbb"]
     }
     buf.sorted_keys = ["1", "2"]
-    buf.current_sort = (0, "ID", 0)  # no sort
+    buf.sort_key = (0, "ID", 0)  # no sort
 
     # Обновляем существующий элемент
     pos = buf._find_insert_position("1", was_present=True, old_pos=0)
@@ -322,7 +330,7 @@ def test_find_insert_position_sorted_existing_key(buffer_for_sort_tests):
         "3": ["15", "ccc"]
     }
     buf.sorted_keys = ["1", "2", "3"]
-    buf.current_sort = (0, "ID", 1)
+    buf.sort_key = (0, "ID", 1)
 
     # Ключ уже в списке, проверим, куда он будет вставлен повторно
     pos = buf._find_insert_position("3", was_present=True)

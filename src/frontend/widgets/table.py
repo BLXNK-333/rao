@@ -96,6 +96,7 @@ class DataTable(ttk.Frame):
         self._headers = headers
         self._stretchable_column_indices = set(stretchable_column_indices)
         self._table_len = len(data)
+        self.estimated_column_widths = self._estimate_column_lengths(headers, data)
 
         self._setup_layout()
         self._create_dt()
@@ -104,6 +105,21 @@ class DataTable(ttk.Frame):
         self._fill_table(data)
         self._adjust_column_widths()
         self._apply_bindings()
+
+    def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
+                                sample_size: int = 20) -> Dict[str, int]:
+        """Оценивает максимальную длину строки (в символах) для каждой колонки."""
+        max_lengths = {col: len(col) for col in headers}
+        sample = data[-sample_size:]  # последние sample_size строк
+
+        for row in sample:
+            for idx, col in enumerate(headers):
+                if idx >= len(row):
+                    continue  # пропускаем, если в строке меньше значений, чем колонок
+                value = str(row[idx])
+                max_lengths[col] = max(max_lengths[col], len(value))
+
+        return max_lengths
 
     def _setup_layout(self):
         """Настройка сетки для виджета таблицы."""
@@ -507,7 +523,8 @@ class DataTable(ttk.Frame):
 
 
 class TablePanel(ttk.Frame):
-    # ICON COLOR = #29B6F6
+    # ICON BLUE COLOR = #29B6F6
+    # ICON RED COLOR = "#E94B4B"
 
     def __init__(
             self,
@@ -935,8 +952,6 @@ class Table(ttk.Frame):
         if sort_key and sort_key[1] != "":
             data = [ROWS_DICT[k] for k in self.buffer.sorted_keys]
 
-        self.data_table.estimated_column_widths = self._estimate_column_lengths(HEADER_LIST, data)
-
         self.data_table.create_table(
             headers=HEADER_LIST,
             data=data,
@@ -958,21 +973,6 @@ class Table(ttk.Frame):
             prev = {0: -1, 1: 0, -1: 1}
             self.data_table._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
             self.data_table._set_arrow(sort_key[0], sort_key[1])
-
-    def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
-                                sample_size: int = 20) -> Dict[str, int]:
-        """Оценивает максимальную длину строки (в символах) для каждой колонки."""
-        max_lengths = {col: len(col) for col in headers}
-        sample = data[-sample_size:]  # последние sample_size строк
-
-        for row in sample:
-            for idx, col in enumerate(headers):
-                if idx >= len(row):
-                    continue  # пропускаем, если в строке меньше значений, чем колонок
-                value = str(row[idx])
-                max_lengths[col] = max(max_lengths[col], len(value))
-
-        return max_lengths
 
     def _setup_layout(self):
         """Настраивает `grid` для размещения элементов."""
