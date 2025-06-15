@@ -696,7 +696,7 @@ class TableBuffer:
                 )
             self.sorted_keys = keys
         except Exception as e:
-            self._logger.warning(f"Sort failed: {e}")
+            self._logger.warning(f"Сортировка не удалась: {e}")
             self.sorted_keys = list(self.original_data.keys())
 
         self.history.clear()
@@ -736,7 +736,8 @@ class TableBuffer:
             try:
                 index = filtered_keys.index(card_id)
             except ValueError:
-                self._logger.warning(f"Card {card_id} not found in filtered list after insert")
+                self._logger.warning(
+                    f"Карточка {card_id} не найдена в отфильтрованном списке после вставки")
                 return
 
         EventBus.publish(

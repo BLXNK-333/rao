@@ -251,7 +251,7 @@ class Export(ttk.Frame):
         try:
             month_index = self.MONTHS.index(month_name) + 1
         except ValueError:
-            self._logger.error(f"[MONTHLY] Invalid month: {month_name}")
+            self._logger.error(f"Недопустимый месяц: {month_name}")
             return
 
         export_report = MonthReport(
@@ -273,7 +273,7 @@ class Export(ttk.Frame):
         try:
             quarter_index = int(quarter_str[0])
         except (ValueError, IndexError):
-            self._logger.error(f"[QUARTERLY] Invalid quarter: {quarter_str}")
+            self._logger.error(f"Недопустимый квартал: {quarter_str}")
             return
 
         export_report = QuarterReport(

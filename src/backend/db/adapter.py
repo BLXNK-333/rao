@@ -91,8 +91,8 @@ class TableAdapter:
                 return value.lower() in ("true", "1", "yes", "on")
 
         except Exception:
-            self._logger.warning(f"Failed to coerce field '{field_name}' "
-                                 f"with value '{value}' to {column_type}")
+            self._logger.warning(f"Не удалось привести поле '{field_name}' "
+                                 f"со значением '{value}' к типу {column_type}")
         return value
 
     def _stringify(self, value: Any, column_type: Any, field_name: str = "") -> str:

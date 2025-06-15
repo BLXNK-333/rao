@@ -32,7 +32,7 @@ class Database:
         try:
             Base.metadata.create_all(self.engine)
         except SQLAlchemyError as e:
-            self._logger.error(f"Database error during initialization: {e}")
+            self._logger.error(f"Ошибка базы данных во время инициализации: {e}")
             self._logger.debug(traceback.format_exc())
             self.close()
 
@@ -43,7 +43,7 @@ class Database:
         """
         model = self.model_map.get(table_name.lower())
         if not model:
-            self._logger.error(f"Invalid table name: {table_name}")
+            self._logger.error(f"Недопустимое имя таблицы: {table_name}")
             return []
 
         try:
@@ -57,7 +57,7 @@ class Database:
                 rows.append(row_dict)
             return rows
         except SQLAlchemyError as e:
-            self._logger.error(f"Database error in get_all_rows('{table_name}'): {e}")
+            self._logger.error(f"Ошибка базы данных в get_all_rows('{table_name}'): {e}")
             self._logger.debug(traceback.format_exc())
             return []
 
@@ -136,21 +136,21 @@ class Database:
         """
         model = self.model_map.get(table_name.lower())
         if not model:
-            self._logger.error(f"Invalid table name in get_card: {table_name}")
+            self._logger.error(f"Недопустимое имя таблицы в get_card: {table_name}")
             return None
 
         try:
             record = self.session.get(model, int(card_id))
             if not record:
                 self._logger.warning(
-                    f"Record with ID {card_id} not found in {table_name}")
+                    f"Запись с ID {card_id} не найдена в {table_name}")
                 return None
 
             return {col.name: getattr(record, col.name) for col in model.__table__.columns}
 
         except SQLAlchemyError as e:
             self._logger.error(
-                f"Database error in get_card('{table_name}', '{card_id}'): {e}")
+                f"Ошибка базы данных в get_card('{table_name}', '{card_id}'): {e}")
             self._logger.debug(traceback.format_exc())
             return None
 
