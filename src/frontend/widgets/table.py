@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List, Dict, Set, Tuple, Optional
 from datetime import datetime
 
@@ -54,8 +55,6 @@ class DataTable(ttk.Frame):
         # Текущее состояние сортировки: (column_name, direction),
         # где direction = 1 (▲), -1 (▼), 0 (нет)
         self._sort_key = sort_key
-        self._sort_debounce_id = None
-        self._sort_debounce_active = False
 
         # {column_id: tooltip_text}
         self._heading_tooltip_texts = dict(
@@ -145,8 +144,8 @@ class DataTable(ttk.Frame):
 
     def _setup_styles(self):
         """Настройка стилей для строк таблицы."""
-        self.dt.tag_configure("oddrow", background="#f0f0f0")
-        self.dt.tag_configure("evenrow", background="white")
+        self.dt.tag_configure("oddrow", background="#ededed")
+        self.dt.tag_configure("evenrow", background="#fcfcfc")
 
     def _render_headers(self):
         """Настройка заголовков колонок и их событий."""
@@ -202,7 +201,7 @@ class DataTable(ttk.Frame):
 
     def on_header_click(self, col_index: int, col_name: str):
         """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""
-        self.after(0, lambda i=col_index, c=col_name: self._on_header_click(i, c))
+        self.after(0, lambda i=col_index, c=col_name: self._handle_header_click(i, c))
 
     def _set_arrow(self, col_index: int, col_name: str):
         prev_idx, prev_name, prev_dir = self._sort_key if self._sort_key else (-1, "", 0)
@@ -229,27 +228,11 @@ class DataTable(ttk.Frame):
                 self._sort_key = (col_index, col_name, 1)
                 self.dt.heading(col_name, text=f"▲ {col_name}")
 
-    def _on_header_click(self, col_index: int, col_name: str):
-        """Обработка клика по заголовку колонки, переключение сортировки."""
+    def _handle_header_click(self, col_index: int, col_name: str):
+        """Обработка клика по заголовку: обновление стрелки и публикация ключа."""
         self._set_arrow(col_index, col_name)
 
-        # Дебаунс
-        if self._sort_debounce_id is not None and self._sort_debounce_active:
-            try:
-                self.after_cancel(self._sort_debounce_id)
-            except Exception:
-                pass  # таймер уже сработал
-            self._sort_debounce_id = None
-
-        self._sort_debounce_active = True
-        self._sort_debounce_id = self.after(300, lambda _=None: self._debounced_sort_publish())
-
-    def _debounced_sort_publish(self):
-        """Публикует событие сортировки с задержкой (дебаунс)."""
-        self._sort_debounce_active = False
-        self._sort_debounce_id = None
         state = self.sort_states_map.get(self._group_id)
-
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.DT.SORT_CHANGED,
                   group_id=self._group_id),
@@ -334,6 +317,7 @@ class DataTable(ttk.Frame):
             ),
             state_name, self.user_defined_widths
         )
+        self.update_idletasks()
 
     # endregion
 
@@ -499,7 +483,7 @@ class TablePanel(ttk.Frame):
             container,
             image=self.icons[icon],
             command=command,
-            activebackground="#e7e7e7",  # Можно задать любой цвет для hover
+            activebackground="#e3e3e3",  # Можно задать любой цвет для hover
             tooltip_text=tooltip
         )
         btn.pack(side="left", padx=2)
@@ -819,11 +803,14 @@ class TableBuffer:
             except (ValueError, TypeError):
                 primary_key = float('inf')
 
-        elif column_name == "date":
-            try:
-                primary_key = datetime.strptime(val.strip(), "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                primary_key = datetime.max.date()
+        # Тут убрал, у строки текущего формата ключ выходит корректным, нет смысла
+        # переводить в объекты, только замедляет.
+        #
+        # elif column_name == "date":
+        #     try:
+        #         primary_key = datetime.strptime(val.strip(), "%Y-%m-%d").date()
+        #     except (ValueError, TypeError):
+        #         primary_key = datetime.max.date()
 
         else:
             primary_key = str(val).lower()
