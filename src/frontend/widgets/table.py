@@ -30,7 +30,9 @@ class DataTable(ttk.Frame):
             self,
             parent,
             group_id: GROUP,
-            enable_tooltips: bool = False,
+            headers: List[str],
+            data: List[List[str]],
+            stretchable_column_indices: List[int],
             show_table_end: bool = False,
             sort_key: Optional[Tuple[int, str, int]] = None
     ):
@@ -38,11 +40,10 @@ class DataTable(ttk.Frame):
 
         self._group_id = group_id.value
         self.dt = None
-        self._enable_tooltips = enable_tooltips
-        self._headers: List[str] = []
-        self._stretchable_column_indices: Set[int] = set()
+        self._headers = headers
+        self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
         self._show_table_end: bool = show_table_end
-        self._table_len = 0
+        self._table_len = len(data)
 
         self.estimated_column_widths: Dict[str, int] = {}
         self.user_defined_widths: Dict[str, int] = {}
@@ -56,10 +57,20 @@ class DataTable(ttk.Frame):
         self._sort_debounce_id = None
         self._sort_debounce_active = False
 
-        self._heading_tooltip = None
-        self._heading_tooltip_after_id = None
-        self._heading_tooltip_texts = {}  # {column_id: tooltip_text}
-        self._last_heading_col = ""
+        # {column_id: tooltip_text}
+        self._heading_tooltip_texts = dict(
+            zip((f"#{i}" for i in range(1, len(headers) + 1)), headers)
+        )
+
+        self.create_table(headers, data)
+
+        # Scroll to the table bottom
+        self.scroll_to_bottom(rows=data, is_full=True)
+
+        if sort_key and sort_key[1] != "":
+            prev = {0: -1, 1: 0, -1: 1}
+            self._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
+            self._set_arrow(sort_key[0], sort_key[1])
 
         self.subscribe()
 
@@ -86,16 +97,8 @@ class DataTable(ttk.Frame):
 
     # region Table Creation and Setup
 
-    def create_table(
-            self,
-            headers: List[str],
-            data: List[List[str]],
-            stretchable_column_indices: List[int]
-    ):
+    def create_table(self, headers: List[str], data: List[List[str]]):
         """Создание таблицы с заголовками и данными."""
-        self._headers = headers
-        self._stretchable_column_indices = set(stretchable_column_indices)
-        self._table_len = len(data)
         self.estimated_column_widths = self._estimate_column_lengths(headers, data)
 
         self._setup_layout()
@@ -164,9 +167,6 @@ class DataTable(ttk.Frame):
         self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
         self.dt.bind("<Delete>", self._delete_selected_rows)
         self.dt.bind("<Configure>", self._resize_columns)
-
-        if self._enable_tooltips:
-            self._bind_tooltip_events()
 
     # endregion
 
@@ -451,76 +451,6 @@ class DataTable(ttk.Frame):
 
     # endregion
 
-    # start region HeaderTooltip
-    def _on_mouse_motion_header(self, event):
-        """Обработка движения мыши над заголовком, показ задержанного тултипа."""
-        region = self.dt.identify_region(event.x, event.y)
-        if region != "heading":
-            self._cancel_heading_tooltip()
-            return
-
-        col_id = self.dt.identify_column(event.x)
-        if not col_id or col_id == self._last_heading_col:
-            return
-
-        self._cancel_heading_tooltip()
-        self._last_heading_col = col_id
-
-        # задержка перед показом тултипа (в мс)
-        self._heading_tooltip_after_id = self.after(
-            500,
-            lambda _=None: self._show_heading_tooltip(col_id, event.x_root + 12,
-                                               event.y_root + 10)
-        )
-
-    def _on_mouse_leave_header(self, _):
-        """Отмена тултипа при уходе мыши с заголовка."""
-        self._cancel_heading_tooltip()
-
-    def _cancel_heading_tooltip(self):
-        if self._heading_tooltip_after_id:
-            self.after_cancel(self._heading_tooltip_after_id)
-            self._heading_tooltip_after_id = None
-        self._hide_heading_tooltip()
-        self._last_heading_col = ""
-
-    def _show_heading_tooltip(self, col_id, x, y):
-        text = self._heading_tooltip_texts.get(col_id) or self.dt.heading(col_id).get(
-            "text", "")
-        self._hide_heading_tooltip()
-
-        self._heading_tooltip = tk.Toplevel(self)
-        self._heading_tooltip.wm_overrideredirect(True)
-        self._heading_tooltip.wm_geometry(f"+{x}+{y}")
-
-        # Можно добавить тень, эмулируя через рамку и цвет, но tkinter не поддерживает blur
-        frame = ttk.Frame(self._heading_tooltip, style="Tooltip.TFrame")
-        frame.pack()
-
-        label = ttk.Label(
-            frame,
-            text=text,
-            wraplength=400,
-            style="CustomTooltip.TLabel",
-            justify="left"
-        )
-        label.pack()
-
-    def _hide_heading_tooltip(self):
-        if self._heading_tooltip:
-            self._heading_tooltip.destroy()
-            self._heading_tooltip = None
-
-    def _bind_tooltip_events(self):
-        self.dt.bind("<Motion>", self._on_mouse_motion_header)
-        self.dt.bind("<Leave>", self._on_mouse_leave_header)
-
-    def _unbind_tooltip_events(self):
-        self.dt.unbind("<Motion>")
-        self.dt.unbind("<Leave>")
-
-    # endregion
-
 
 class TablePanel(ttk.Frame):
     # ICON BLUE COLOR = #29B6F6
@@ -564,12 +494,13 @@ class TablePanel(ttk.Frame):
         self.search_entry = UndoEntry(self.container, textvariable=self.search_var)
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(10, 0))
 
-    def _create_btn(self, container: ttk.Frame, icon: ICON, command):
+    def _create_btn(self, container: ttk.Frame, icon: ICON, command, tooltip: str):
         btn = HoverButton(
             container,
             image=self.icons[icon],
             command=command,
-            activebackground="#e7e7e7"  # Можно задать любой цвет для hover
+            activebackground="#e7e7e7",  # Можно задать любой цвет для hover
+            tooltip_text=tooltip
         )
         btn.pack(side="left", padx=2)
         return btn
@@ -580,13 +511,13 @@ class TablePanel(ttk.Frame):
         container.pack(side="left")
 
         icons = [
-            (ICON.ADD_CARD_24, self.add_card),
-            (ICON.EDIT_CARD_24, self.edit_card),
-            (ICON.DELETE_CARD_24, self.delete_card)
+            (ICON.ADD_CARD_24, self.add_card, "Добавить новую карточку"),
+            (ICON.EDIT_CARD_24, self.edit_card, "Редактировать карточку"),
+            (ICON.DELETE_CARD_24, self.delete_card, "Удалить карточку")
         ]
 
-        for icon, command in icons:
-            btn = self._create_btn(container, icon, command)
+        for icon, command, tooltip in icons:
+            btn = self._create_btn(container, icon, command, tooltip)
             self.buttons[icon] = btn
 
         auto_size_btn = ToggleButton(
@@ -595,14 +526,16 @@ class TablePanel(ttk.Frame):
             image_off=self.icons[ICON.AUTO_SIZE_OFF_24],
             initial_state=False,
             command=self.on_auto_size_applied,
-            activebackground="#e7e7e7"
+            activebackground="#e7e7e7",
+            tooltip_text="Растянуть колонки по содержимому"
         )
 
         auto_size_btn.pack(side="left", padx=2)
         auto_size_btn.configure(state="disabled")
         self.buttons[ICON.AUTO_SIZE_ON_24] = auto_size_btn
 
-        clear_btn = self._create_btn(container, ICON.ERASER_24, self.clear_entry)
+        clear_btn = self._create_btn(
+            container, ICON.ERASER_24, self.clear_entry, "Очистить поле ввода")
         self.buttons[ICON.ERASER_24] = clear_btn
 
     def add_card(self):
@@ -931,17 +864,6 @@ class Table(ttk.Frame):
         sort_key = sort_key_state
 
         # Init
-        self.table_panel = TablePanel(
-            parent=self,
-            group_id=group_id
-        )
-        self.data_table = DataTable(
-            parent=self,
-            group_id=group_id,
-            enable_tooltips=enable_tooltips,
-            show_table_end=show_table_end,
-            sort_key=sort_key
-        )
         self.buffer = TableBuffer(
             group_id=group_id,
             original_data=ROWS_DICT,
@@ -949,13 +871,23 @@ class Table(ttk.Frame):
             sort_key=sort_key
         )
 
+        # Сортируем данные, если надо, перед созданием виджета таблицы
         if sort_key and sort_key[1] != "":
             data = [ROWS_DICT[k] for k in self.buffer.sorted_keys]
 
-        self.data_table.create_table(
+        self.data_table = DataTable(
+            parent=self,
+            group_id=group_id,
             headers=HEADER_LIST,
             data=data,
-            stretchable_column_indices=stretchable_column_indices
+            stretchable_column_indices=stretchable_column_indices,
+            show_table_end=show_table_end,
+            sort_key=sort_key
+        )
+
+        self.table_panel = TablePanel(
+            parent=self,
+            group_id=group_id
         )
 
         if not prev_cols_state:
@@ -966,13 +898,20 @@ class Table(ttk.Frame):
 
         self.data_table.user_defined_widths = prev_cols_state
 
-        # Scroll to the table bottom
-        self.data_table.scroll_to_bottom(rows=data, is_full=True)
+        if enable_tooltips:
+            self.register_tooltips()
 
-        if sort_key and sort_key[1] != "":
-            prev = {0: -1, 1: 0, -1: 1}
-            self.data_table._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
-            self.data_table._set_arrow(sort_key[0], sort_key[1])
+    def register_tooltips(self):
+        for btn in self.table_panel.buttons.values():
+            EventBus.publish(
+                Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
+                btn, btn.tooltip_text
+            )
+
+        EventBus.publish(
+            Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
+            self.data_table.dt, self.data_table._heading_tooltip_texts
+        )
 
     def _setup_layout(self):
         """Настраивает `grid` для размещения элементов."""

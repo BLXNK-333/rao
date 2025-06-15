@@ -4,7 +4,7 @@ from .frontend.window import Window
 from .backend.db.order_map import DEFAULT_CARD_VALUES, FIELD_MAPS
 
 from .frontend.frames import SongsTable, Report, Export, Settings
-from .frontend.widgets import Terminal, Table, CardManager, TopMenu
+from .frontend.widgets import Terminal, Table, CardManager, TopMenu, TooltipManager
 from .frontend.icons.icon_map import Icons, ICON
 from .frontend.style import UIStyles
 from .frontend.bindings import apply_global_bindings
@@ -20,8 +20,6 @@ def bootstrap():
     # -------------------------------
     backend = BackendService()
     set_logging_config(queue=backend.msg_queue)
-    all_songs_list = backend.sync_db.get_all_rows(HEADER.SONGS)
-    all_report_list = backend.sync_db.get_all_rows(HEADER.REPORT)
 
     songs_table_cols_state = backend.sync_db.get_state(STATE.SONGS_COL_SIZE)
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
@@ -41,13 +39,15 @@ def bootstrap():
     # -------------------------------
     # Main UI frames creation
     # -------------------------------
+    tooltip_manager = TooltipManager(master=window)
+
     songs = SongsTable(
         parent=window.content,
         group_id=GROUP.SONGS_TABLE,
         header_map=FIELD_MAPS.get(HEADER.SONGS),
-        data=all_songs_list,
+        data=backend.sync_db.get_all_rows(HEADER.SONGS),
         stretchable_column_indices=[1, 2, 4, 5, 6],
-        enable_tooltips=False,
+        enable_tooltips=True,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         show_table_end=False,
         prev_cols_state=songs_table_cols_state,
@@ -58,7 +58,7 @@ def bootstrap():
         parent=window.content,
         group_id=GROUP.REPORT_TABLE,
         header_map=FIELD_MAPS.get(HEADER.REPORT),
-        data=all_report_list,
+        data=backend.sync_db.get_all_rows(HEADER.REPORT),
         stretchable_column_indices=[3, 4, 7, 8, 12],
         enable_tooltips=True,
         show_table_end=True,

@@ -149,6 +149,7 @@ class EventType:
 
         class UI:
             CLOSE_WINDOW = "VIEW.UI.CLOSE_WINDOW"
+            REGISTER_TOOLTIP = "VIEW.UI.REGISTER_TOOLTIP"
 
     # PLACEHOLDER
     FAKE_EVENT = "FAKE_EVENT"

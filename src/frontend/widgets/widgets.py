@@ -409,9 +409,10 @@ class UndoText(tk.Text):
 
 
 class HoverButton(tk.Button):
-    def __init__(self, master=None, **kwargs):
+    def __init__(self, master=None, tooltip_text: Optional[str] = None, **kwargs):
         self.default_bg = kwargs.pop("background", "#eff0f1")
         self.hover_bg = kwargs.pop("activebackground", "#e7e7e7")
+        self.tooltip_text = tooltip_text
 
         super().__init__(
             master,
@@ -446,6 +447,7 @@ class ToggleButton(HoverButton):
             image_on: tk.PhotoImage = None,
             image_off: tk.PhotoImage = None,
             initial_state: bool = False,
+            tooltip_text: Optional[str] = None,
             **kwargs
     ):
         """
@@ -456,12 +458,13 @@ class ToggleButton(HoverButton):
             image_on: The image for the "on" state.
             image_off: The image for the "off" state.
             initial_state: The initial state of the button (True for "on", False for "off").
+            tooltip_text: The tooltip text for the button.
             **kwargs: Additional keyword arguments passed to the Button constructor.
                       The 'command' key (if present) will be used as a callback function
                       when the button is toggled.
         """
         callback = kwargs.pop('command', None)
-        super().__init__(master, **kwargs)
+        super().__init__(master, tooltip_text, **kwargs)
 
         self._image_on = image_on
         self._image_off = image_off

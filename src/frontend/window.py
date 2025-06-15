@@ -142,7 +142,11 @@ class Window(tk.Tk, BaseWindow):
                 self.card_manager.lift_all_cards()
                 return  # пользователь отменил закрытие
 
-        self.destroy()
+        self.withdraw()
+        self.update()
+        self.quit()
+        self.after_idle(lambda _=None: self.destroy())
+
         EventBus.publish(Event(event_type=EventType.VIEW.UI.CLOSE_WINDOW))
 
     def close(self):
