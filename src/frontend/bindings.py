@@ -93,8 +93,11 @@ def _on_paste(event, root):
                 widget.delete(sel_start, sel_end)
             except tk.TclError:
                 pass
-            widget.insert("insert", text)
-            widget.icursor(widget.index("insert") + len(text))
+
+            pos = widget.index("insert")
+            widget.insert(pos, text)
+            widget.icursor(pos + len(text))
+
     except Exception:
         pass
 
@@ -118,17 +121,15 @@ def _setup_on_windows(root: tk.Tk):
     # OS: Windows 7 x64 SP1
     def on_ctrl(event):
         ctrl = (event.state & 0x0004) != 0 or (event.state & 0x0008) != 0
-        if not ctrl:
-            return
+        if ctrl:
+            if event.keycode == 65:   # Ctrl+A
+                return _on_select_all(event)
+            elif event.keycode == 67:  # Ctrl+C
+                return _on_copy(event, root)
+            elif event.keycode == 86:  # Ctrl+V
+                return _on_paste(event, root)
 
-        if event.keycode == 65:   # Ctrl+A
-            return _on_select_all(event)
-        elif event.keycode == 67:  # Ctrl+C
-            return _on_copy(event, root)
-        elif event.keycode == 86:  # Ctrl+V
-            return _on_paste(event, root)
-
-        return "break"
+        return None
 
     for cls in ["TEntry", "TCombobox", "Text"]:
         for seq in ("<Control-KeyPress>", "<Control-a>", "<Control-A>", "<Control-c>",

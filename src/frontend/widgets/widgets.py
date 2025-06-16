@@ -1,4 +1,5 @@
-from typing import Optional, Any, Set, Dict, List, TYPE_CHECKING, Callable
+from typing import Optional, Any, Set, Dict, List, TYPE_CHECKING, Callable, Tuple
+import sys
 import time
 
 import tkinter as tk
@@ -186,84 +187,94 @@ class UndoEntry(ttk.Entry):
     """
 
     def __init__(
-            self,
-            master: Optional[tk.Misc] = None,
-            delay_ms: int = 500,
-            **kwargs: Any
+        self,
+        master: Optional[tk.Misc] = None,
+        delay_ms: int = 500,
+        **kwargs: Any
     ) -> None:
-        """
-        Initializes the UndoEntry widget with undo/redo functionality.
-
-        Args:
-            master (Optional[tk.Misc]): Parent widget.
-            delay_ms (int): Debounce delay in milliseconds for undo operations.
-            **kwargs: Additional arguments passed to the `ttk.Entry` constructor.
-        """
         self._var: Optional[tk.StringVar] = kwargs.pop("textvariable", None)
         if self._var is None:
             self._var = tk.StringVar()
 
         super().__init__(master, textvariable=self._var, **kwargs)
 
-        self._undo_stack: list[str] = []
-        self._redo_stack: list[str] = []
+        self._undo_stack: list[tuple[str, int]] = []
+        self._redo_stack: list[tuple[str, int]] = []
         self._last_change_time: float = 0
         self._delay: float = delay_ms / 1000
         self._ignore: bool = False
 
         self._initial_value = self._var.get()
-        self._undo_stack.append(self._initial_value)
+        self._undo_stack.append((self._initial_value, 0))
 
         self._var.trace_add("write", self._on_write)
-        self.bind("<Control-z>", self._undo)
-        self.bind("<Control-y>", self._redo)
+        self._apply_bindings()
+
+    def _apply_bindings(self):
+        if sys.platform == "win32":
+            self.bind("<Control-KeyPress>", self._on_ctrl)
+        else:
+            self.bind("<Control-z>", self._undo)
+            self.bind("<Control-Z>", self._undo)
+            self.bind("<Control-y>", self._redo)
+            self.bind("<Control-Y>", self._redo)
+
+    def _on_ctrl(self, event: tk.Event) -> Optional[str]:
+        if event.keycode == 90:  # Z
+            return self._undo(event)
+        elif event.keycode == 89:  # Y
+            return self._redo(event)
+        return None
 
     def _on_write(self, *args: Any) -> None:
         """
-        Handles text changes and adds the new value to the undo stack.
-
-        Args:
-            *args: Additional arguments passed from the trace callback.
+        Handles text changes and adds the new value with cursor position to the undo stack.
         """
         if self._ignore:
             return
 
         now = time.time()
         current_value = self._var.get()
+        cursor_pos = self.index("insert")
 
         if not self._undo_stack or now - self._last_change_time > self._delay:
-            if current_value != self._undo_stack[-1]:
-                self._undo_stack.append(current_value)
+            if current_value != self._undo_stack[-1][0]:
+                self._undo_stack.append((current_value, cursor_pos))
                 self._last_change_time = now
                 self._redo_stack.clear()
         else:
-            self._undo_stack[-1] = current_value
+            self._undo_stack[-1] = (current_value, cursor_pos)
 
     def _undo(self, event: Optional[tk.Event] = None) -> str:
         """
-        Performs the undo operation by restoring the previous state from the undo stack.
-        Returns "break" to prevent default event handling.
+        Performs the undo operation by restoring the previous state and cursor.
         """
-        if len(self._undo_stack) > 1:
+        if len(self._undo_stack) > 2:
             self._redo_stack.append(self._undo_stack.pop())
+            text, cursor = self._undo_stack[-1]
             self._ignore = True
-            self._var.set(self._undo_stack[-1])
-            self.icursor("end")
+            self._var.set(text)
+            self.icursor(cursor)
             self._ignore = False
             self._last_change_time = time.time()
+        elif self._undo_stack:
+            text, _ = self._undo_stack[0]
+            self._ignore = True
+            self._var.set(text)
+            self.icursor("end")
+            self._ignore = False
         return "break"
 
     def _redo(self, event: Optional[tk.Event] = None) -> str:
         """
-        Performs the redo operation by reapplying the text from the redo stack.
-        Returns "break" to prevent default event handling.
+        Performs the redo operation by reapplying the text and cursor position.
         """
         if self._redo_stack:
-            value = self._redo_stack.pop()
-            self._undo_stack.append(value)
+            text, cursor = self._redo_stack.pop()
+            self._undo_stack.append((text, cursor))
             self._ignore = True
-            self._var.set(value)
-            self.icursor("end")
+            self._var.set(text)
+            self.icursor(cursor)
             self._ignore = False
             self._last_change_time = time.time()
         return "break"
@@ -308,22 +319,37 @@ class UndoText(tk.Text):
         if styles_dict:
             self.config(**styles_dict)
 
-        self._undo_stack: List[str] = []
-        self._redo_stack: List[str] = []
+        self._undo_stack: List[Tuple[str, str]] = []
+        self._redo_stack: List[Tuple[str, str]] = []
         self._last_change_time: float = 0
         self._delay: float = delay_ms / 1000
         self._ignore: bool = False
         self._resize_enabled: bool = resize
 
         self.insert("1.0", initial_value)
-        self._undo_stack.append(initial_value)
+        self._undo_stack.append((initial_value, "1.0"))
 
+        self._apply_bindings()
+
+    def _apply_bindings(self):
         self.bind("<KeyRelease>", self._on_write)
-        self.bind("<Control-z>", self._undo)
-        self.bind("<Control-y>", self._redo)
+        if sys.platform == "win32":
+            self.bind("<Control-KeyPress>", self._on_ctrl)
+        else:
+            self.bind("<Control-z>", self._undo)
+            self.bind("<Control-Z>", self._undo)
+            self.bind("<Control-y>", self._redo)
+            self.bind("<Control-Y>", self._redo)
 
         if self._resize_enabled:
             self._enable_resize()
+
+    def _on_ctrl(self, event: tk.Event) -> Optional[str]:
+        if event.keycode == 90:  # Z
+            return self._undo(event)
+        elif event.keycode == 89:  # Y
+            return self._redo(event)
+        return None
 
     def _on_write(self, event: Optional[tk.Event] = None) -> None:
         """
@@ -335,14 +361,15 @@ class UndoText(tk.Text):
 
         now = time.time()
         current_value = self.get("1.0", "end-1c")
+        cursor = self.index("insert")
 
         if not self._undo_stack or now - self._last_change_time > self._delay:
-            if current_value != self._undo_stack[-1]:
-                self._undo_stack.append(current_value)
+            if current_value != self._undo_stack[-1][0]:
+                self._undo_stack.append((current_value, cursor))
                 self._last_change_time = now
                 self._redo_stack.clear()
         else:
-            self._undo_stack[-1] = current_value
+            self._undo_stack[-1] = (current_value, cursor)
 
         if self._resize_enabled:
             self._resize(event)
@@ -352,12 +379,19 @@ class UndoText(tk.Text):
         Performs undo operation by restoring previous state from undo stack.
         Returns "break" to prevent default event behavior.
         """
-        if len(self._undo_stack) > 1:
+        if len(self._undo_stack) > 2:
             self._redo_stack.append(self._undo_stack.pop())
             self._ignore = True
-            self._set_text(self._undo_stack[-1])
+            text, cursor = self._undo_stack[-1]
+            self._set_text(text, cursor)
             self._ignore = False
             self._last_change_time = time.time()
+        elif self._undo_stack:
+            # Единственный элемент в undo-стеке — возможно начальное состояние
+            self._ignore = True
+            text, _ = self._undo_stack[0]
+            self._set_text(text, cursor="end")
+            self._ignore = False
         return "break"
 
     def _redo(self, event: Optional[tk.Event] = None) -> str:
@@ -366,28 +400,21 @@ class UndoText(tk.Text):
         Returns "break" to prevent default event behavior.
         """
         if self._redo_stack:
-            text = self._redo_stack.pop()
-            self._undo_stack.append(text)
+            text, cursor = self._redo_stack.pop()
+            self._undo_stack.append((text, cursor))
             self._ignore = True
-            self._set_text(text)
+            self._set_text(text, cursor)
             self._ignore = False
             self._last_change_time = time.time()
         return "break"
 
-    def _set_text(self, content: str) -> None:
-        """
-        Sets the text content of the widget while preserving cursor position.
-
-        Args:
-            content (str): New text to display.
-        """
-        cursor = self.index("insert")
+    def _set_text(self, content: str, cursor: str = "end") -> None:
         self.delete("1.0", "end")
         self.insert("1.0", content)
         try:
             self.mark_set("insert", cursor)
         except tk.TclError:
-            pass
+            self.mark_set("insert", "end")
 
     def _enable_resize(self) -> None:
         """
