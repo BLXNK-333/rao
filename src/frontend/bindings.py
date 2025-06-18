@@ -104,6 +104,26 @@ def _on_paste(event, root):
     return "break"
 
 
+def _on_cut(event, root):
+    widget = event.widget
+    try:
+        if isinstance(widget, tk.Text):
+            text = widget.get("sel.first", "sel.last")
+            widget.delete("sel.first", "sel.last")
+        elif isinstance(widget, (tk.Entry, ttk.Entry, ttk.Combobox)):
+            text = widget.selection_get()
+            sel_start = widget.index("sel.first")
+            sel_end = widget.index("sel.last")
+            widget.delete(sel_start, sel_end)
+        else:
+            return "break"
+        root.clipboard_clear()
+        root.clipboard_append(text)
+    except Exception:
+        pass
+    return "break"
+
+
 def _setup_on_linux(root: tk.Tk):
     # Тестировал на:
     # OS: Fedora Linux 42 (Workstation Edition) x86_64 , DE: GNOME 48.2, Display: x11
@@ -114,6 +134,8 @@ def _setup_on_linux(root: tk.Tk):
         root.bind_class(cls, "<Control-C>", lambda e: _on_copy(e, root))
         root.bind_class(cls, "<Control-v>", lambda e: _on_paste(e, root))
         root.bind_class(cls, "<Control-V>", lambda e: _on_paste(e, root))
+        root.bind_class(cls, "<Control-x>", lambda e: _on_cut(e, root))
+        root.bind_class(cls, "<Control-X>", lambda e: _on_cut(e, root))
 
 
 def _setup_on_windows(root: tk.Tk):
@@ -128,10 +150,17 @@ def _setup_on_windows(root: tk.Tk):
                 return _on_copy(event, root)
             elif event.keycode == 86:  # Ctrl+V
                 return _on_paste(event, root)
+            elif event.keycode == 88:  # Ctrl+X
+                return _on_cut(event, root)
 
         return None
 
     for cls in ["TEntry", "TCombobox", "Text"]:
-        for seq in ("<Control-KeyPress>", "<Control-a>", "<Control-A>", "<Control-c>",
-                    "<Control-C>", "<Control-v>", "<Control-V>"):
+        for seq in (
+                "<Control-KeyPress>",
+                "<Control-a>", "<Control-A>",
+                "<Control-c>", "<Control-C>",
+                "<Control-v>", "<Control-V>",
+                "<Control-x>", "<Control-X>"
+        ):
             root.bind_class(cls, seq, on_ctrl)
