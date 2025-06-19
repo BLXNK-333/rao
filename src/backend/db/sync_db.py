@@ -4,7 +4,8 @@ from .database import Database
 from .adapter import TableAdapter
 from .validator import DataValidator
 from .order_map import FIELD_MAPS, FIELD_MAPS_REVERSED
-from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE
+from .settings import DEFAULT_SETTINGS
+from ...enums import EventType, DispatcherType, HEADER, GROUP, STATE, ConfigKey
 from ...eventbus import Event, Subscriber, EventBus
 from ...entities import MonthReport, QuarterReport
 
@@ -32,7 +33,8 @@ class SyncDB:
             (EventType.VIEW.TABLE.DT.AUTO_COL_SIZE, self.set_state),
             (EventType.VIEW.EXPORT.PATH_CHANGED, self.set_state),
             (EventType.VIEW.EXPORT.GENERATE_REPORT, self.get_report),
-            (EventType.VIEW.TABLE.DT.SORT_CHANGED, self.set_state)
+            (EventType.VIEW.TABLE.DT.SORT_CHANGED, self.set_state),
+            (EventType.VIEW.SETTINGS.ON_CHANGE, self.set_settings),
         ]
 
         for event, handler in handlers:
@@ -137,6 +139,14 @@ class SyncDB:
                 data = [data[0], col_name, data[2]]
 
         self.db.set_state(str(state_name.value), data)
+
+    def get_settings(self) -> Dict[str, Any]:
+        db_settings = self.db.get_settings()
+        return {k: db_settings.get(k) or v for k, v in DEFAULT_SETTINGS.items()}
+
+    def set_settings(self, settings: Dict[ConfigKey, Any]):
+        converted_settings = {k.value: v for k, v in settings.items()}
+        self.db.set_settings(settings=converted_settings)
 
     def close_connection(self):
         self.db.close()

@@ -11,7 +11,7 @@ from .frontend.bindings import apply_global_bindings
 
 from .logging_config import set_logging_config
 from .eventbus import EventBus, TkDispatcher, QueueDispatcher
-from .enums import DispatcherType, HEADER, GROUP, STATE
+from .enums import DispatcherType, HEADER, GROUP, STATE, ConfigKey
 
 
 def bootstrap():
@@ -28,10 +28,15 @@ def bootstrap():
     songs_table_sort_state = backend.sync_db.get_state(STATE.SONGS_SORT)
     report_table_sort_state = backend.sync_db.get_state(STATE.REPORT_SORT)
 
+    settings = backend.sync_db.get_settings()
+
     # -------------------------------
     # UI initialization
     # -------------------------------
-    window = Window()
+    window = Window(
+        terminal_visible=settings.get(ConfigKey.SHOW_TERMINAL),
+        terminal_state=settings.get(ConfigKey.TERMINAL_SIZE)
+    )
     icons = Icons()
     UIStyles(window)
     apply_global_bindings(window)
@@ -47,7 +52,7 @@ def bootstrap():
         header_map=FIELD_MAPS.get(HEADER.SONGS),
         data=backend.sync_db.get_all_rows(HEADER.SONGS),
         stretchable_column_indices=[1, 2, 4, 5, 6],
-        enable_tooltips=True,
+        enable_tooltips=False,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         show_table_end=False,
         prev_cols_state=songs_table_cols_state,
@@ -70,7 +75,12 @@ def bootstrap():
         monthly_path=monthly_path_state,
         quarterly_path=quarterly_path_state
     )
-    settings = Settings(parent=window.content)
+    settings = Settings(
+        parent=window.content,
+        settings=settings,
+        version="1.1.0",
+        github_url="https://github.com/BLXNK-333/rao"
+    )
 
     card_manager = CardManager(
         parent=window.content,

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Date, Time
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Date, Time, Text
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -42,3 +42,14 @@ class State(Base):
 
     key = Column(String, primary_key=True)
     value = Column(JSON, nullable=False)
+
+
+class Settings(Base):
+    """
+    ORM model for application settings.
+    Each setting is stored as a key-value pair.
+    """
+    __tablename__ = 'settings'
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=False)

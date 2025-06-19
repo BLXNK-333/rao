@@ -73,9 +73,11 @@ class TableAdapter:
                 return datetime.strptime(value, "%Y-%m-%d").date()
 
             elif isinstance(column_type, Time):
-                if "duration" in field_name and len(value.split(":")) == 2:
-                    m, s = map(int, value.split(":"))
-                    return time(minute=m, second=s)
+                if "duration" in field_name:
+                    value = value.replace('.', ':').replace(',', ':')
+                    if len(value.split(":")) == 2:
+                        m, s = map(int, value.split(":"))
+                        return time(minute=m, second=s)
                 return datetime.strptime(value, "%H:%M:%S").time()
 
             elif isinstance(column_type, DateTime):

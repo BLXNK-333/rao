@@ -1,4 +1,4 @@
-from typing import cast, Optional
+from typing import cast, Optional, Union
 import sys
 from pathlib import Path
 
@@ -12,13 +12,20 @@ from ..enums import TERM, EventType, DispatcherType
 
 
 class Window(tk.Tk, BaseWindow):
-    def __init__(self, geometry: str = "800x600"):
+    def __init__(
+            self,
+            geometry: str = "800x600",
+            terminal_visible: bool = False,
+            terminal_state: Union[TERM, str] = TERM.MEDIUM
+    ):
         super().__init__()
         self.withdraw()
         self.title("PAO")
         self.protocol("WM_DELETE_WINDOW", self.close)
         self._set_icon()
         self._geometry = geometry
+        self.terminal_visible = terminal_visible  # (сначала скрыт)
+        self.terminal_state = TERM(terminal_state)      # (начальный размер)
 
         # Настройки grid
         self.grid_rowconfigure(1, weight=1)  # main area
@@ -31,8 +38,6 @@ class Window(tk.Tk, BaseWindow):
         self.content.grid_columnconfigure(0, weight=1)
 
         self.current_frame = None
-        self.terminal_visible = False       # (сначала скрыт)
-        self.terminal_state = TERM.MEDIUM   # (начальный размер)
         self.terminal = None                # (установить после через self.setup_layout)
 
         # Нужен для управления карточками перед закрытием

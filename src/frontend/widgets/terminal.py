@@ -58,7 +58,7 @@ class TermPanel(ttk.Frame):
 
     def create_widget(self) -> None:
         """Создаёт заголовок и кнопки управления."""
-        label = ttk.Label(self, text="Terminal", style="TermPanel.TLabel")
+        label = ttk.Label(self, text="Терминал", style="TermPanel.TLabel")
         label.pack(side="left", padx=10)
 
         # Кнопки управления

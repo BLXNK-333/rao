@@ -84,6 +84,7 @@ class ScrolledFrame(ttk.Frame):
 
         # Frame to hold content
         self.content = ttk.Frame(self._canvas)
+        self.content.columnconfigure(0, weight=1)
         self._window_id = self._canvas.create_window((0, 0), window=self.content, anchor="nw")
 
         # Grid stretch configuration
@@ -330,6 +331,8 @@ class UndoText(tk.Text):
         self._undo_stack.append((initial_value, "1.0"))
 
         self._apply_bindings()
+        if self._resize_enabled:
+            self._enable_resize()
 
     def _apply_bindings(self):
         self.bind("<KeyRelease>", self._on_write)
@@ -340,9 +343,6 @@ class UndoText(tk.Text):
             self.bind("<Control-Z>", self._undo)
             self.bind("<Control-y>", self._redo)
             self.bind("<Control-Y>", self._redo)
-
-        if self._resize_enabled:
-            self._enable_resize()
 
     def _on_ctrl(self, event: tk.Event) -> Optional[str]:
         if event.keycode == 90:  # Z

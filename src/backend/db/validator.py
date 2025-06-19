@@ -67,6 +67,7 @@ class DataValidator:
             return False
 
         try:
+            value = value.replace('.', ':').replace(',', ':')
             # Попробуем разные форматы
             if value.count(":") == 2:
                 datetime.strptime(value, "%H:%M:%S")

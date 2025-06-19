@@ -42,7 +42,10 @@ class Icons:
 
         ICON.FOLDER_16: "folder-open-16.png",
         ICON.PIN_ON_24: "pin-on-24.png",
-        ICON.PIN_OFF_24: "pin-off-24.png"
+        ICON.PIN_OFF_24: "pin-off-24.png",
+
+        ICON.VERSION_24: "version-24.png",
+        ICON.CODE_24: "code-24.png"
     }
     _instance = None
     _loaded = False

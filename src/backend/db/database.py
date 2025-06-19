@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional, Type, Any
+import json
 import logging
 import datetime
 from pathlib import Path
@@ -7,7 +8,7 @@ import traceback
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from .models import Base, State, Songs, Report
+from .models import Base, State, Songs, Report, Settings
 from .base import DB_PATH, Engine, SessionFactory
 from ...enums import HEADER
 
@@ -279,6 +280,41 @@ class Database:
             # self._logger.debug(f"Обновлено состояние: '{key}', с значениями {value}")
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при установке состояния '{key}': {e}")
+            self._logger.debug(traceback.format_exc())
+            self.session.rollback()
+
+    def get_settings(self) -> Dict[str, Any]:
+        """
+        Возвращает все настройки из таблицы `settings` как словарь.
+        """
+        try:
+            rows = self.session.query(Settings).all()
+            return {
+                row.key: json.loads(row.value)
+                for row in rows
+            }
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка при чтении настроек: {e}")
+            self._logger.debug(traceback.format_exc())
+            return {}
+
+    def set_settings(self, settings: Dict[str, Any]) -> None:
+        """
+        Устанавливает или обновляет таблицу настроек.
+
+        :param settings: словарь ключей и значений
+        """
+        try:
+            for key, value in settings.items():
+                value_json = json.dumps(value)
+                existing = self.session.get(Settings, key)
+                if existing:
+                    existing.value = value_json
+                else:
+                    self.session.add(Settings(key=key, value=value_json))
+            self.session.commit()
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка при записи настроек: {e}")
             self._logger.debug(traceback.format_exc())
             self.session.rollback()
 

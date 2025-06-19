@@ -34,9 +34,8 @@ class ICON(str, Enum):
     PIN_ON_24 = "pin_on_24"
     PIN_OFF_24 = "pin_off_24"
 
-
-class CONFIGKEYS(str, Enum):
-    pass
+    VERSION_24 = "version_24",
+    CODE_24 = "code_24"
 
 
 class TERM(str, Enum):
@@ -70,6 +69,12 @@ class STATE(str, Enum):
     QUARTERLY_PATH = "quarterly_path"
     SONGS_SORT = "songs_sort"
     REPORT_SORT = "report_sort"
+
+
+class ConfigKey(str, Enum):
+    SHOW_TERMINAL = "SHOW_TERMINAL"
+    TERMINAL_SIZE = "TERMINAL_SIZE"
+    # etc.
 
 
 class EventType:
@@ -139,13 +144,7 @@ class EventType:
             PATH_CHANGED = "VIEW.CARD.PATH_CHANGED"
 
         class SETTINGS:
-            class CLICK:
-                SAVE = "VIEW.SETTINGS.CLICK.SAVE"
-                RESET = "VIEW.SETTINGS.CLICK.RESET"
-                CANCEL = "VIEW.SETTINGS.CLICK.CANCEL"
-
-            class DATA:
-                PAYLOAD = "VIEW.SETTINGS.DATA.PAYLOAD"
+            ON_CHANGE = "VIEW.SETTING.ON_CHANGE"
 
         class UI:
             CLOSE_WINDOW = "VIEW.UI.CLOSE_WINDOW"

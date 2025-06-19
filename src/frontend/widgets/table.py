@@ -422,6 +422,7 @@ class DataTable(ttk.Frame):
         """Обновляет таблицу, показывая только отфильтрованные данные
         и перекрашивает строки."""
         self._fill_table(rows)
+        self.update_idletasks()
         self._recolor_rows()
         self.scroll_to_bottom(rows, is_full)
 
@@ -890,11 +891,11 @@ class Table(ttk.Frame):
             self.register_tooltips()
 
     def register_tooltips(self):
-        for btn in self.table_panel.buttons.values():
-            EventBus.publish(
-                Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
-                btn, btn.tooltip_text
-            )
+        # for btn in self.table_panel.buttons.values():
+        #     EventBus.publish(
+        #         Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
+        #         btn, btn.tooltip_text
+        #     )
 
         EventBus.publish(
             Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
