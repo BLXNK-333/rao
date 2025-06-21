@@ -29,6 +29,9 @@ def _setup_common_bindings(root: tk.Tk):
     root.bind_class("TButton", "<Return>", on_button_enter)
     root.bind_class("TButton", "<KP_Enter>", on_button_enter)
 
+    root.bind_class("Text", "<Double-Button-1>", "")
+    root.bind_class("Text", "<Triple-Button-1>", "")
+
 
 def _on_focus_out(event):
     widget = event.widget
@@ -126,39 +129,86 @@ def _on_cut(event, root):
     return "break"
 
 
-def _on_double_click(event):
-    widget = event.widget
-    if not isinstance(widget, tk.Text):
-        return
+def _get_click_location(widget: tk.Text, event: tk.Event) -> str:
+    """
+    Определяет тип клика в tk.Text:
+    - 'left': по левой грани (очень близко к краю)
+    - 'inside': по символу
+    - 'outside': за пределами текста (вниз, вправо, между строками)
+    """
+    try:
+        index = widget.index(f"@{event.x},{event.y}")
+        bbox = widget.bbox(index)
+        if not bbox:
+            return "outside"  # Ниже или правее последней строки
 
+        x0, y0, w, h = bbox
+
+        # Чёткий левый край (порог 5px условно, на практике подходит)
+        if event.x <= 5:
+            return "left"
+        elif x0 <= event.x <= x0 + w and y0 <= event.y <= y0 + h:
+            return "inside"
+        else:
+            return "outside"
+
+    except Exception:
+        return "outside"
+
+
+def _set_cursor_to_start(widget: tk.Text):
+    widget.mark_set("insert", "1.0")
+    widget.see("1.0")
+
+
+def _set_cursor_to_end(widget: tk.Text):
+    widget.mark_set("insert", "end-1c")
+    widget.see("insert")
+
+
+def _on_click(event):
+    widget = event.widget
+    where = _get_click_location(widget, event)
+
+    if where == "left":
+        widget.after(1, lambda: _set_cursor_to_start(widget))
+    elif where == "outside":
+        widget.after(1, lambda: _set_cursor_to_end(widget))
+    return None
+
+
+def _on_double_click(event):
+    """Обработчик двойного клика:
+    - по краю — выделяет первое слово в строке
+    - после текста — выделяет последнее слово
+    - по слову — выделяет слово под курсором
+    """
+    widget = event.widget
     try:
         index = widget.index(f"@{event.x},{event.y}")
         line, col = map(int, index.split('.'))
         line_text = widget.get(f"{line}.0", f"{line}.end").rstrip()
+        location = _get_click_location(widget, event)
 
-        if not _is_click_inside_text(widget, event) or col >= len(line_text):
-            widget.after(1, lambda _=None: _select_last_word_in_line(widget, line_text, line))
+        if location == "left":
+            widget.after(1, lambda: _select_first_word_in_line(widget, line_text, line))
+        elif location == "outside" or col >= len(line_text):
+            widget.after(1, lambda: _select_last_word_in_line(widget, line_text, line))
         else:
-            widget.after(1, lambda _=None: _move_insert_to_sel_end(widget))
+            widget.after(1, lambda: _select_word_under_cursor(widget, index))
+
     except Exception:
         pass
 
 
 def _on_triple_click(event):
     widget = event.widget
-    if not isinstance(widget, tk.Text):
-        return "break"
-
     try:
         index = widget.index(f"@{event.x},{event.y}")
         line = index.split('.')[0]
         text = widget.get(f"{line}.0", f"{line}.end").rstrip()
         end = f"{line}.{len(text)}"
-
-        widget.tag_remove("sel", "1.0", "end")
-        widget.tag_add("sel", f"{line}.0", end)
-        widget.mark_set("insert", end)
-        widget.see(end)
+        _select_range(widget, f"{line}.0", end)
     except Exception:
         pass
 
@@ -180,29 +230,55 @@ def _move_insert_to_sel_end(widget):
         pass
 
 
-def _on_click(event):
-    widget = event.widget
-    if not _is_click_inside_text(widget, event):
-        # Клик по краю — отложенная установка курсора
-        widget.after(1, lambda: _set_cursor_to_end(widget))
-    return None
-
-
-def _set_cursor_to_end(widget: tk.Text):
-    widget.mark_set("insert", "end-1c")
-    widget.see("insert")
-
-
-def _is_click_inside_text(widget: tk.Text, event: tk.Event) -> bool:
+def _select_range(widget: tk.Text, start: str, end: str):
+    """Выделяет диапазон текста и перемещает курсор в конец."""
     try:
-        index = widget.index(f"@{event.x},{event.y}")
-        bbox = widget.bbox(index)
-        if not bbox:
-            return False  # Клик вне текста
-        x0, y0, w, h = bbox
-        return x0 <= event.x <= x0 + w and y0 <= event.y <= y0 + h
+        widget.tag_remove("sel", "1.0", "end")
+        widget.tag_add("sel", start, end)
+        widget.mark_set("insert", end)
+        widget.see(end)
     except Exception:
-        return False
+        pass
+
+
+def _select_first_word_in_line(widget: tk.Text, line_text: str, line: int):
+    try:
+        words = line_text.split()
+        if not words:
+            return
+        first_word = words[0]
+        start = f"{line}.0"
+        end = f"{line}.{len(first_word)}"
+        _select_range(widget, start, end)
+    except Exception:
+        pass
+
+
+def _select_word_under_cursor(widget: tk.Text, index: str):
+    try:
+        line, col = map(int, index.split('.'))
+        line_text = widget.get(f"{line}.0", f"{line}.end")
+        if not line_text.strip():
+            return
+
+        # Граница безопасного диапазона
+        col = min(col, len(line_text) - 1)
+
+        # Найдём начало и конец слова вручную
+        start_idx = col
+        while start_idx > 0 and line_text[start_idx - 1] != ' ':
+            start_idx -= 1
+
+        end_idx = col
+        while end_idx < len(line_text) and line_text[end_idx] != ' ':
+            end_idx += 1
+
+        start = f"{line}.{start_idx}"
+        end = f"{line}.{end_idx}"
+        _select_range(widget, start, end)
+
+    except Exception:
+        pass
 
 
 def _select_last_word_in_line(widget: tk.Text, line_text: str, line: int):
@@ -212,16 +288,11 @@ def _select_last_word_in_line(widget: tk.Text, line_text: str, line: int):
         words = line_text.split()
         if not words:
             return
-
         last = words[-1]
         start_offset = line_text.rfind(last)
         start = f"{line}.{start_offset}"
         end = f"{line}.{start_offset + len(last)}"
-
-        widget.tag_remove("sel", "1.0", "end")
-        widget.tag_add("sel", start, end)
-        widget.mark_set("insert", end)
-        widget.see(end)
+        _select_range(widget, start, end)
     except Exception:
         pass
 
@@ -290,11 +361,14 @@ class ContextMenuMixin(tk.Widget):
     the mixin functionality.
     """
 
+    _menu_activebackground = "#a3d1e5" if sys.platform == "win32" else "#c9c9c9"
+
     def enable_context_menu(self):
         self._suppress_focus_out = False
         self.bind("<FocusOut>", self._on_focus_out)
 
         if isinstance(self, tk.Text):
+            # Привязки ниже только для tk.Text
             self.bind("<Button-1>", _on_click)
             self.bind("<Double-Button-1>", _on_double_click, add="+")
             self.bind("<Triple-Button-1>", _on_triple_click, add="+")
@@ -327,7 +401,7 @@ class ContextMenuMixin(tk.Widget):
             bd=1,
             font=("Helvetica", 11),
             activeforeground="#222333",
-            activebackground="#c9c9c9",
+            activebackground=self._menu_activebackground,
         )
 
         def select_all():
