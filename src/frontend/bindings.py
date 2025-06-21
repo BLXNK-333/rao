@@ -164,3 +164,52 @@ def _setup_on_windows(root: tk.Tk):
                 "<Control-x>", "<Control-X>"
         ):
             root.bind_class(cls, seq, on_ctrl)
+
+
+class ContextMenuMixin(tk.Widget):
+    def enable_context_menu(self):
+        self._suppress_focus_out = False
+        self.bind("<FocusOut>", self._on_focus_out)
+        self._add_context_menu()
+
+    def _on_focus_out(self, event):
+        def check_focus():
+            if getattr(self, "_suppress_focus_out", False):
+                return
+
+            try:
+                focused = self.focus_get()
+                if focused == self:
+                    return
+                if isinstance(self, tk.Text):
+                    self.tag_remove("sel", "1.0", "end")
+                elif isinstance(self, (tk.Entry, ttk.Entry, ttk.Combobox)):
+                    self.selection_clear()
+            except Exception:
+                pass
+
+        self.after(100, lambda _=None: check_focus())
+        return "break"
+
+    def _add_context_menu(self):
+        menu = tk.Menu(self, tearoff=0)
+
+        def select_all():
+            event = tk.Event()
+            event.widget = self
+            _on_select_all(event)
+
+        menu.add_command(label="Вырезать", command=lambda: self.event_generate("<<Cut>>"))
+        menu.add_command(label="Копировать", command=lambda: self.event_generate("<<Copy>>"))
+        menu.add_command(label="Вставить", command=lambda: self.event_generate("<<Paste>>"))
+        menu.add_separator()
+        menu.add_command(label="Выделить всё", command=select_all)
+
+        def show_menu(event):
+            self._suppress_focus_out = True
+            self.focus_set()
+            menu.tk_popup(event.x_root, event.y_root)
+            self.after(200, lambda _=None: setattr(self, "_suppress_focus_out", False))
+
+        self.bind("<Button-3>", show_menu)
+        self.bind("<Control-Button-1>", show_menu)

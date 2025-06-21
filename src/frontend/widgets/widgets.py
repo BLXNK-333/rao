@@ -5,6 +5,8 @@ import time
 import tkinter as tk
 from tkinter import ttk
 
+from ..bindings import ContextMenuMixin
+
 if TYPE_CHECKING:
     class _WindowProto(tk.Misc, tk.BaseWidget): ...
 else:
@@ -170,7 +172,7 @@ class ScrolledFrame(ttk.Frame):
             self.bind_scroll_events(child, bound_widgets)
 
 
-class UndoEntry(ttk.Entry):
+class UndoEntry(ttk.Entry, ContextMenuMixin):
     """
     A custom Entry widget with undo/redo functionality.
 
@@ -210,6 +212,7 @@ class UndoEntry(ttk.Entry):
 
         self._var.trace_add("write", self._on_write)
         self._apply_bindings()
+        self.enable_context_menu()
 
     def _apply_bindings(self):
         if sys.platform == "win32":
@@ -281,7 +284,7 @@ class UndoEntry(ttk.Entry):
         return "break"
 
 
-class UndoText(tk.Text):
+class UndoText(tk.Text, ContextMenuMixin):
     """
     A custom Text widget with basic undo/redo functionality and optional auto-resizing.
 
@@ -333,6 +336,7 @@ class UndoText(tk.Text):
         self._apply_bindings()
         if self._resize_enabled:
             self._enable_resize()
+        self.enable_context_menu()
 
     def _apply_bindings(self):
         self.bind("<KeyRelease>", self._on_write)

@@ -55,18 +55,21 @@ class CheckboxFrame(BaseFrame):
 
 
 class ComboboxFrame(BaseFrame):
-    def __init__(self, parent, key: ConfigKey, value: Any, attr_name: str, listbox_options: Dict[str, Any]):
+    def __init__(self, parent, key: ConfigKey, value: Any, attr_name: str,
+                 listbox_options: Dict[str, Any]):
         super().__init__(parent, key, attr_name)
         self.keys_map = listbox_options
 
         # найти ключ, соответствующий значению
         reverse_map = {v: k for k, v in listbox_options.items()}
-        selected_key = reverse_map.get(value, next(iter(listbox_options)))  # если не найдено — взять первый
+        # если не найдено — взять первый
+        selected_key = reverse_map.get(value, next(iter(listbox_options)))
 
         self.var = StringVar(value=selected_key)
         self._bind_trace()
 
-        combo = ttk.Combobox(self, textvariable=self.var, values=list(listbox_options.keys()), state="readonly")
+        combo = ttk.Combobox(self, textvariable=self.var,
+                             values=list(listbox_options.keys()), state="readonly")
         self.add_widget(combo)
 
     def _get_value(self, *_):

@@ -43,7 +43,7 @@ class UIStyles(ThemedStyle):
 
         self.configure("TabHover.TFrame", background="#d0d0d0")  # цвет при hover
         self.configure("TabHover.TLabel", background="#d0d0d0", foreground="#444444",
-                        font=("Segoe UI", 12))
+                       font=("Segoe UI", 12))
 
         # Настройка активной вкладки
         self.configure("ActiveTab.TFrame",
@@ -55,7 +55,7 @@ class UIStyles(ThemedStyle):
         """Настраивает стили для панели терминала"""
         self.configure("TermPanel.TFrame", background="#dbdbdb")
         self.configure("TermPanel.TLabel", background="#dbdbdb", foreground="black",
-                        font=("Arial", 10))
+                       font=("Arial", 10))
 
     def configure_tooltip_style(self):
         """Настраивает стили подсказок заголовков таблицы."""
