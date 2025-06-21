@@ -160,6 +160,7 @@ class TermLogger(ttk.Frame):
 
     BACKGROUND = "#1a1a1a"
     FOREGROUND = "white"
+    SELECTBACKGROUND = "#37414F"
 
     def __init__(self, parent: ttk.Frame):
         super().__init__(parent)
@@ -194,16 +195,16 @@ class TermLogger(ttk.Frame):
             height=self.HEIGHTS[self.active_state],
             bg=self.BACKGROUND,
             fg=self.FOREGROUND,
-            state="disabled",
             bd=0,
+            selectbackground=self.SELECTBACKGROUND,  # Цвет фона выделения
             highlightthickness=1,
             highlightbackground="#555555",  # цвет рамки (неактивной)
             highlightcolor="#555555",
             padx = 5,  # горизонтальный отступ текста
             pady = 5  # вертикальный отступ текста
-
         )
         self.text.pack(expand=True, fill="both")
+        self.text.configure(state="disabled")
         self._configure_log_tags()
 
         # Start periodic log updates
