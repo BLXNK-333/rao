@@ -49,8 +49,14 @@ class CardFields(ttk.Frame):
     def _on_modified(self, event):
         widget = event.widget
 
+        # Только если реально есть модификация
         if widget.edit_modified():
-            # Только если реально есть модификация
+            # Сброс фона при изменении
+            try:
+                if widget.cget("bg") != "white":
+                    widget.config(bg="white")
+            except tk.TclError:
+                pass
             self.change_callback()
             widget.edit_modified(False)  # Сбрасываем флаг только после обработки
 
@@ -106,16 +112,6 @@ class CardFields(ttk.Frame):
                 widget.config(bg=new_color)
             except tk.TclError:
                 # Иногда текстовые поля в readonly могут кидать ошибку — игнорируем
-                pass
-
-    def clear_field_highlight(self):
-        """Снимает подсветку всех полей, устанавливая белый фон."""
-        for field, widget in self.entries.items():
-            if field == "ID":
-                continue
-            try:
-                widget.config(bg="white")
-            except tk.TclError:
                 pass
 
 
@@ -231,8 +227,6 @@ class CardEditor(tk.Toplevel, BaseWindow):
     def update_save_button_state(self):
         """Обновляет состояние кнопки Save в зависимости от наличия изменений."""
         state = self.fields.has_changes()
-        if not state:
-            self.fields.clear_field_highlight()
         if self.get_id() or self.is_new:
             self.buttons.set_save_button_enabled(state)
 
