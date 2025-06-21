@@ -1,5 +1,19 @@
 from ttkthemes import ThemedStyle
 
+TEXT_STYLES = {
+    "wrap": "word",
+    "font": ("Helvetica", 11),
+    "bg": "#ffffff",
+    "fg": "#0a0a0a",
+    "insertontime": 500,
+    "insertofftime": 500,
+    "insertbackground": "#444444",  # Цвет курсора
+    "selectbackground": "#a3d1e5",  # Синий фон выделения
+    "selectforeground": "#333444",  # Белый текст при выделении
+    "relief": "flat",
+    "bd": 1
+}
+
 
 class UIStyles(ThemedStyle):
     def __init__(self, root):
@@ -10,6 +24,28 @@ class UIStyles(ThemedStyle):
         self.configure_menu_style()
         self.configure_term_panel_style()
         self.configure_tooltip_style()
+        self.configure_tentry_style()
+
+    def configure_tentry_style(self):
+        # Настраиваем виджет Entry
+        self.configure('TEntry',
+                        foreground=TEXT_STYLES["fg"],
+                        fieldbackground=TEXT_STYLES["bg"],
+                        borderwidth=TEXT_STYLES["bd"],
+                        relief=TEXT_STYLES["relief"])
+
+        # Настраиваем поведение выделения по состоянию focus и !focus
+        self.map("TEntry",
+                  selectbackground=[
+                      ("focus", TEXT_STYLES["selectbackground"]),
+                      ("!focus", "#d3d3d3")  # светло-серый цвет для неактивного выделения
+                  ],
+                  selectforeground=[
+                      ("focus", TEXT_STYLES["selectforeground"]),
+                      ("!focus", "#444444")
+                      # более темный серый для текста при неактивном выделении
+                  ]
+                  )
 
     def configure_table_styles(self):
         """Настраивает стили для таблицы (Treeview)"""
@@ -26,7 +62,7 @@ class UIStyles(ThemedStyle):
         """Настраивает стили для Card"""
         # Метки (Label)
         self.configure("Custom.TLabel",
-                       font=("Arial", 10, "bold"),
+                       font=("Helvetica", 10, "bold"),
                        padding=(5, 2))
 
     def configure_menu_style(self):

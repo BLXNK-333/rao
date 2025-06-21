@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ..bindings import ContextMenuMixin
+from ..style import TEXT_STYLES
 
 if TYPE_CHECKING:
     class _WindowProto(tk.Misc, tk.BaseWidget): ...
@@ -318,10 +319,12 @@ class UndoText(tk.Text, ContextMenuMixin):
         """
         Initialize the UndoText widget.
         """
-        super().__init__(master, **kwargs)
+        super().__init__(master, padx=3, pady=2, **kwargs)
 
         if styles_dict:
             self.config(**styles_dict)
+        else:
+            self.config(**TEXT_STYLES)
 
         self._undo_stack: List[Tuple[str, str]] = []
         self._redo_stack: List[Tuple[str, str]] = []

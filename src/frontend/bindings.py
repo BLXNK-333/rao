@@ -4,7 +4,8 @@ from tkinter import ttk
 
 
 def apply_global_bindings(root: tk.Tk):
-    """Глобальные бинды: Ctrl+A, Ctrl+V, Ctrl+C, фокус и клавиша Enter на кнопках."""
+    """Глобальные бинды: Ctrl+A, Ctrl+V, Ctrl+C, фокус и клавиша Enter на кнопках,
+    минорные улучшения."""
     if sys.platform == "win32":
         _setup_on_windows(root)
     else:
@@ -24,6 +25,7 @@ def _setup_common_bindings(root: tk.Tk):
 
     for cls in ["TEntry", "TCombobox", "Text"]:
         root.bind_class(cls, "<FocusOut>", _on_focus_out)
+        root.bind_class(cls, "<Escape>", _on_focus_out)
     root.bind_class("TButton", "<Return>", on_button_enter)
     root.bind_class("TButton", "<KP_Enter>", on_button_enter)
 
@@ -124,6 +126,106 @@ def _on_cut(event, root):
     return "break"
 
 
+def _on_double_click(event):
+    widget = event.widget
+    if not isinstance(widget, tk.Text):
+        return
+
+    try:
+        index = widget.index(f"@{event.x},{event.y}")
+        line, col = map(int, index.split('.'))
+        line_text = widget.get(f"{line}.0", f"{line}.end").rstrip()
+
+        if not _is_click_inside_text(widget, event) or col >= len(line_text):
+            widget.after(1, lambda _=None: _select_last_word_in_line(widget, line_text, line))
+        else:
+            widget.after(1, lambda _=None: _move_insert_to_sel_end(widget))
+    except Exception:
+        pass
+
+
+def _on_triple_click(event):
+    widget = event.widget
+    if not isinstance(widget, tk.Text):
+        return "break"
+
+    try:
+        index = widget.index(f"@{event.x},{event.y}")
+        line = index.split('.')[0]
+        text = widget.get(f"{line}.0", f"{line}.end").rstrip()
+        end = f"{line}.{len(text)}"
+
+        widget.tag_remove("sel", "1.0", "end")
+        widget.tag_add("sel", f"{line}.0", end)
+        widget.mark_set("insert", end)
+        widget.see(end)
+    except Exception:
+        pass
+
+    return "break"
+
+
+def _move_insert_to_sel_end(widget):
+    try:
+        if isinstance(widget, tk.Text):
+            sel_end = widget.index("sel.last")
+            widget.mark_set("insert", sel_end)
+            widget.see("insert")
+
+        elif isinstance(widget, (tk.Entry, ttk.Entry, ttk.Combobox)):
+            sel_end = widget.index("sel.last")
+            widget.icursor(sel_end)
+
+    except tk.TclError:
+        pass
+
+
+def _on_click(event):
+    widget = event.widget
+    if not _is_click_inside_text(widget, event):
+        # Клик по краю — отложенная установка курсора
+        widget.after(1, lambda: _set_cursor_to_end(widget))
+    return None
+
+
+def _set_cursor_to_end(widget: tk.Text):
+    widget.mark_set("insert", "end-1c")
+    widget.see("insert")
+
+
+def _is_click_inside_text(widget: tk.Text, event: tk.Event) -> bool:
+    try:
+        index = widget.index(f"@{event.x},{event.y}")
+        bbox = widget.bbox(index)
+        if not bbox:
+            return False  # Клик вне текста
+        x0, y0, w, h = bbox
+        return x0 <= event.x <= x0 + w and y0 <= event.y <= y0 + h
+    except Exception:
+        return False
+
+
+def _select_last_word_in_line(widget: tk.Text, line_text: str, line: int):
+    try:
+        if not line_text.strip():
+            return
+        words = line_text.split()
+        if not words:
+            return
+
+        last = words[-1]
+        start_offset = line_text.rfind(last)
+        start = f"{line}.{start_offset}"
+        end = f"{line}.{start_offset + len(last)}"
+
+        widget.tag_remove("sel", "1.0", "end")
+        widget.tag_add("sel", start, end)
+        widget.mark_set("insert", end)
+        widget.see(end)
+    except Exception:
+        pass
+
+
 def _setup_on_linux(root: tk.Tk):
     # Тестировал на:
     # OS: Fedora Linux 42 (Workstation Edition) x86_64 , DE: GNOME 48.2, Display: x11
@@ -144,7 +246,7 @@ def _setup_on_windows(root: tk.Tk):
     def on_ctrl(event):
         ctrl = (event.state & 0x0004) != 0 or (event.state & 0x0008) != 0
         if ctrl:
-            if event.keycode == 65:   # Ctrl+A
+            if event.keycode == 65:  # Ctrl+A
                 return _on_select_all(event)
             elif event.keycode == 67:  # Ctrl+C
                 return _on_copy(event, root)
@@ -167,9 +269,36 @@ def _setup_on_windows(root: tk.Tk):
 
 
 class ContextMenuMixin(tk.Widget):
+    """
+    Mixin to add a context menu and enhanced selection behavior
+    to Tkinter widgets.
+
+    Features:
+    - Automatically sets up a context menu with basic commands:
+      Cut, Copy, Paste, Select All.
+    - Clears selection in text and entry widgets on focus loss.
+    - Supports correct cursor positioning on double-click in text widgets (tk.Text).
+    - Handles right-click and Ctrl+click to show the context menu.
+
+    Usage:
+        class MyText(tk.Text, ContextMenuMixin):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.enable_context_menu()
+
+    The enable_context_menu() method must be called to activate
+    the mixin functionality.
+    """
+
     def enable_context_menu(self):
         self._suppress_focus_out = False
         self.bind("<FocusOut>", self._on_focus_out)
+
+        if isinstance(self, tk.Text):
+            self.bind("<Button-1>", _on_click)
+            self.bind("<Double-Button-1>", _on_double_click, add="+")
+            self.bind("<Triple-Button-1>", _on_triple_click, add="+")
+
         self._add_context_menu()
 
     def _on_focus_out(self, event):
@@ -193,6 +322,13 @@ class ContextMenuMixin(tk.Widget):
 
     def _add_context_menu(self):
         menu = tk.Menu(self, tearoff=0)
+        menu.configure(
+            activeborderwidth=0,
+            bd=1,
+            font=("Helvetica", 11),
+            activeforeground="#222333",
+            activebackground="#c9c9c9",
+        )
 
         def select_all():
             event = tk.Event()
@@ -200,8 +336,10 @@ class ContextMenuMixin(tk.Widget):
             _on_select_all(event)
 
         menu.add_command(label="Вырезать", command=lambda: self.event_generate("<<Cut>>"))
-        menu.add_command(label="Копировать", command=lambda: self.event_generate("<<Copy>>"))
-        menu.add_command(label="Вставить", command=lambda: self.event_generate("<<Paste>>"))
+        menu.add_command(label="Копировать",
+                         command=lambda: self.event_generate("<<Copy>>"))
+        menu.add_command(label="Вставить",
+                         command=lambda: self.event_generate("<<Paste>>"))
         menu.add_separator()
         menu.add_command(label="Выделить всё", command=select_all)
 

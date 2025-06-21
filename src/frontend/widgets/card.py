@@ -14,13 +14,6 @@ from ...enums import EventType, DispatcherType, HEADER, ICON
 
 class CardFields(ttk.Frame):
     """Отвечает за создание и управление полями ввода"""
-    TEXT_STYLES = {
-        "wrap": "word",
-        "height": 1,
-        "font": ("Arial", 11),
-        "bg": "white"
-    }
-
     def __init__(
             self,
             parent: tk.Toplevel,
@@ -73,11 +66,10 @@ class CardFields(ttk.Frame):
         """Отключает Text-поле с изменением цвета."""
         entry = self.entries[key]
         if entry:
-            entry.config(state="disabled", bg="#f0f0f0", fg="#a0a0a0")
+            entry.config(state="disabled", bg="#f7f7f7", fg="#a0a0a0")
 
     def _add_text_field(self, index: int, key: str):
-        text_entry = UndoText(self, initial_value=self.data.get(key, ""), resize=True,
-                              styles_dict=self.TEXT_STYLES)
+        text_entry = UndoText(self, initial_value=self.data.get(key, ""), resize=True)
         text_entry.grid(row=index, column=1, sticky="ew", padx=5, pady=2)
         self.entries[key] = text_entry
 
@@ -296,6 +288,8 @@ class CardManager:
 
     def _destroy_card(self, card_key: str):
         card = self.opened_cards.pop(card_key)
+        card.withdraw()
+        card.update_idletasks()
         card.destroy()
 
     def _on_card_dict(self, card_key: str, table: str, card_dict: Dict[str, str]):
