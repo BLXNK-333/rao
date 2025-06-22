@@ -76,13 +76,15 @@ class SyncDB:
             "", table_name, remapped_row
         )
 
-    def save_card(self, card_key: str, table_name: str, data: Dict[str, str]):
+    def save_card(self, card_key: str, table_name: Union[str, GROUP], data: Dict[str, str]):
         if not self.validator.validate(card_key, table_name, data):
             return
 
         card_id = data.get("ID")
         adapter = self.adapters.get(table_name)
         remapped_data = adapter.to_db(data)
+        if isinstance(table_name, GROUP):
+            table_name = str(table_name.value)
 
         if card_id:
             self.db.update_card(card_id=card_id, table_name=table_name, payload=remapped_data)
@@ -104,8 +106,10 @@ class SyncDB:
             card_key, table_name, to_view
         )
 
-    def delete_card(self, deleted_ids: List[str], table_name: str):
-        self.db.delete_card(deleted_ids, str(table_name))
+    def delete_card(self, deleted_ids: List[str], table_name: Union[str, GROUP]):
+        if isinstance(table_name, GROUP):
+            table_name = str(table_name.value)
+        self.db.delete_card(deleted_ids, table_name)
 
     def get_state(self, state_name: STATE):
         state = self.db.get_state(state_name)

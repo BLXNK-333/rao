@@ -33,6 +33,8 @@ class ICON(str, Enum):
     FOLDER_16 = "folder_16"
     PIN_ON_24 = "pin_on_24"
     PIN_OFF_24 = "pin_off_24"
+    EYE_24 = "eye_24"
+    HIDDEN_24 = "hidden_24"
 
     VERSION_24 = "version_24",
     CODE_24 = "code_24"
@@ -74,6 +76,7 @@ class STATE(str, Enum):
 class ConfigKey(str, Enum):
     SHOW_TERMINAL = "SHOW_TERMINAL"
     TERMINAL_SIZE = "TERMINAL_SIZE"
+    CARD_TRANSPARENCY = "CARD_TRANSPARENCY"
     # etc.
 
 
@@ -145,6 +148,7 @@ class EventType:
 
         class SETTINGS:
             ON_CHANGE = "VIEW.SETTING.ON_CHANGE"
+            CARD_TRANSPARENCY = "VIEW.SETTING.CARD_TRANSPARENCY"
 
         class UI:
             CLOSE_WINDOW = "VIEW.UI.CLOSE_WINDOW"

@@ -4,7 +4,7 @@ import copy
 
 import tkinter as tk
 from tkinter import ttk
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Union
 
 from .widgets import BaseWindow, ScrolledFrame, UndoText, ToggleButton
 from ..icons import Icons
@@ -14,6 +14,7 @@ from ...enums import EventType, DispatcherType, HEADER, ICON
 
 class CardFields(ttk.Frame):
     """Отвечает за создание и управление полями ввода"""
+
     def __init__(
             self,
             parent: tk.Toplevel,
@@ -120,47 +121,66 @@ class CardButtons(ttk.Frame):
         super().__init__(parent)
         self._icons = Icons()
         self.editor = editor
-        self.pin_btn = None
-        self.save_btn = None
-        self.cancel_btn = None
 
-        self._create_bottom_buttons()
+        self._create_widgets()
+        self._layout_widgets()
 
-        # Вся панель кнопок внизу
         self.pack(fill="x", pady=10)
 
-    def _create_bottom_buttons(self):
-        # Слева пин-кнопка
+    def _create_widgets(self):
+        # Левый блок
+        self.left_frame = ttk.Frame(self)
         self.pin_btn = ToggleButton(
-            self,
+            self.left_frame,
             image_on=self._icons[ICON.PIN_ON_24],
             image_off=self._icons[ICON.PIN_OFF_24],
             initial_state=False,
             command=self.editor.toggle_pin
         )
-        self.pin_btn.pack(side="left", padx=10)
+        self.transparency_btn = ToggleButton(
+            self.left_frame,
+            image_on=self._icons[ICON.EYE_24],
+            image_off=self._icons[ICON.HIDDEN_24],
+            initial_state=False,
+            command=self.editor.toggle_transparency
+        )
 
-        # Справа фрейм, занимающий всё остальное
-        btn_frame = ttk.Frame(self)
-        btn_frame.pack(side="left", fill="x", expand=True)
-
-        # Вложенный фрейм, для центрирования внутри btn_frame
-        inner = ttk.Frame(btn_frame)
-        inner.pack(anchor="center")
-
-        self.save_btn = ttk.Button(inner, text="Сохранить", command=self.editor.on_save)
-        self.save_btn.pack(side="left", padx=5)
+        # Центр
+        self.center_frame = ttk.Frame(self)
+        self.inner_center = ttk.Frame(self.center_frame)
+        self.save_btn = ttk.Button(self.inner_center, text="Сохранить",
+                                   command=self.editor.on_save)
         self.save_btn.state(["disabled"])
+        self.cancel_btn = ttk.Button(self.inner_center, text="Отмена",
+                                     command=self.editor.on_close)
 
-        self.cancel_btn = ttk.Button(inner, text="Отмена", command=self.editor.on_close)
+        # Правый "заполнитель"
+        self.right_filler = ttk.Frame(self, width=0)
+
+    def _layout_widgets(self):
+        # Сборка левого блока
+        self.left_frame.pack(side="left", padx=10)
+        self.pin_btn.pack(side="left", padx=(0, 5))
+        self.transparency_btn.pack(side="left", padx=(5, 0))
+
+        # Центр
+        self.center_frame.pack(side="left", expand=True)
+        self.inner_center.pack(anchor="center")
+        self.save_btn.pack(side="left", padx=5)
         self.cancel_btn.pack(side="left", padx=5)
+
+        # Правый заполнитель
+        self.right_filler.pack(side="right", padx=10)
+        self.after(10, lambda _=None: self._sync_filler_width())
+
+    def _sync_filler_width(self):
+        """Выравнивает правый фрейм по ширине с левым, для центрирования."""
+        width = self.left_frame.winfo_width()
+        self.right_filler.config(width=width)
 
     def set_save_button_enabled(self, enabled: bool):
         """Включает или выключает кнопку Save."""
-        if enabled:
-            self.save_btn.state(["!disabled"])
-        else:
-            self.save_btn.state(["disabled"])
+        self.save_btn.state(["!disabled"] if enabled else ["disabled"])
 
 
 class CardEditor(tk.Toplevel, BaseWindow):
@@ -168,13 +188,15 @@ class CardEditor(tk.Toplevel, BaseWindow):
         HEADER.SONGS: "500x270",
         HEADER.REPORT: "500x440"
     }
+
     def __init__(
             self,
             parent: ttk.Frame,
             card_key: str,
             table: str,
             headers: List[str],
-            data: Dict[str, str]
+            data: Dict[str, str],
+            transparent_alpha: Union[float, int]
     ):
         super().__init__(parent)
         self.withdraw()
@@ -184,6 +206,11 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.table = table
         self.is_new = not bool(data.get("ID"))
         self._pinned = False
+
+        # Прозрачность
+        self.is_transparent = False
+        self.default_alpha = 1.0
+        self.transparent_alpha = transparent_alpha
 
         # Основной контейнер
         self.scrolled = ScrolledFrame(self)
@@ -238,6 +265,11 @@ class CardEditor(tk.Toplevel, BaseWindow):
         except Exception:
             pass  # если editor не поддерживает (в rare case)
 
+    def toggle_transparency(self):
+        self.is_transparent = not self.is_transparent
+        alpha = self.transparent_alpha if self.is_transparent else self.default_alpha
+        self.wm_attributes("-alpha", alpha)
+
 
 class CardManager:
     def __init__(
@@ -248,6 +280,7 @@ class CardManager:
         self.parent = parent
         self.opened_cards: Dict[str, CardEditor] = {}
         self.default_values = default_card_values
+        self._card_transparent_value = 0.72
 
         self.subscribe()
 
@@ -258,7 +291,8 @@ class CardManager:
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self._del_card_ids),
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
             (EventType.BACK.DB.CARD_ID, self._update_card_id),
-            (EventType.BACK.DB.VALIDATION, self._highlight_bad_fields)
+            (EventType.BACK.DB.VALIDATION, self._highlight_bad_fields),
+            (EventType.VIEW.SETTINGS.CARD_TRANSPARENCY, self._set_card_transparent_value)
         ]
 
         for event, handler in subscriptions:
@@ -271,6 +305,9 @@ class CardManager:
         card = self.opened_cards.get(card_key)
         if card:
             card.set_id(card_id)
+
+    def _set_card_transparent_value(self, value: int):
+        self._card_transparent_value = round(value / 100, 2)
 
     def _del_card_ids(self, card_ids: List[str], _table: str):
         for_del = set(card_ids)
@@ -301,18 +338,21 @@ class CardManager:
             open_card.fields.data = card_dict
             open_card.buttons.set_save_button_enabled(False)
 
-    def _open_card(self, table: str, card_dict: Dict[str, str], unlock_save: bool = False):
+    def _open_card(self, table: str, card_dict: Dict[str, str],
+                   unlock_save: bool = False):
         card_key = self.generate_card_key()
         table_name = HEADER(table)
         headers = list(self.default_values.get(table_name).keys())
-        data = card_dict if card_dict else copy.deepcopy(self.default_values.get(table_name))
+        data = card_dict if card_dict else copy.deepcopy(
+            self.default_values.get(table_name))
 
         card = CardEditor(
             parent=self.parent,
             card_key=card_key,
             table=table,
             headers=headers,
-            data=data
+            data=data,
+            transparent_alpha=self._card_transparent_value
         )
         self.opened_cards[card_key] = card
         if unlock_save:
@@ -352,4 +392,3 @@ class CardManager:
         """Поднять все открытые карточки на передний план."""
         for card in self.opened_cards.values():
             card.lift()
-

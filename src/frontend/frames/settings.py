@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from typing import Dict, Any, List, Union, Tuple
+from typing import Dict, Any, List, Optional
+import tkinter as tk
 from tkinter import ttk, StringVar, BooleanVar
 
 from ..widgets import ScrolledFrame
@@ -10,10 +11,13 @@ from ...eventbus import EventBus, Event
 
 
 class BaseFrame(ttk.Frame, ABC):
-    def __init__(self, parent, key: ConfigKey, attr_name: str):
+    def __init__(self, parent, key: ConfigKey, attr_name: str,
+                 event_type: Optional[EventType] = None):
         super().__init__(parent)
         self.key = key
         self.var = None
+        self.event_type = event_type
+
         # Используем grid для внутренней раскладки
         self.columnconfigure(0, minsize=300)  # примерно ширина для лейбла (примерно 40 символов)
         self.columnconfigure(1, weight=0)  # виджет (чекбокс/комбобокс)
@@ -27,10 +31,14 @@ class BaseFrame(ttk.Frame, ABC):
             self.var.trace_add("write", self._on_var_changed)
 
     def _on_var_changed(self, *_):
+        value = self._get_value()
         EventBus.publish(Event(
             EventType.VIEW.SETTINGS.ON_CHANGE
-        ), {self.key: self._get_value()}
+        ), {self.key: value}
         )
+        if self.event_type:
+            EventBus.publish(Event(self.event_type), value)
+
 
     @abstractmethod
     def _get_value(self):
@@ -43,8 +51,9 @@ class BaseFrame(ttk.Frame, ABC):
 
 
 class CheckboxFrame(BaseFrame):
-    def __init__(self, parent, key: ConfigKey, value: bool, attr_name: str):
-        super().__init__(parent, key, attr_name)
+    def __init__(self, parent, *, key: ConfigKey, value: bool, attr_name: str,
+                 event_type: Optional[EventType] = None):
+        super().__init__(parent, key, attr_name, event_type)
         self.var = BooleanVar(value=bool(value))
         self._bind_trace()
         cb = ttk.Checkbutton(self, variable=self.var)
@@ -55,26 +64,62 @@ class CheckboxFrame(BaseFrame):
 
 
 class ComboboxFrame(BaseFrame):
-    def __init__(self, parent, key: ConfigKey, value: Any, attr_name: str,
-                 listbox_options: Dict[str, Any]):
-        super().__init__(parent, key, attr_name)
-        self.keys_map = listbox_options
+    def __init__(self, parent, *, key: ConfigKey, value: Any, attr_name: str,
+                 options: Dict[str, Any], event_type: Optional[EventType] = None):
+        super().__init__(parent, key, attr_name, event_type)
+        self.keys_map = options
 
         # найти ключ, соответствующий значению
-        reverse_map = {v: k for k, v in listbox_options.items()}
+        reverse_map = {v: k for k, v in options.items()}
         # если не найдено — взять первый
-        selected_key = reverse_map.get(value, next(iter(listbox_options)))
+        selected_key = reverse_map.get(value, next(iter(options)))
 
         self.var = StringVar(value=selected_key)
         self._bind_trace()
 
         combo = ttk.Combobox(self, textvariable=self.var,
-                             values=list(listbox_options.keys()), state="readonly")
+                             values=list(options.keys()), state="readonly")
         self.add_widget(combo)
 
     def _get_value(self, *_):
         val = self.var.get()
         return self.keys_map.get(val)
+
+
+class ScaleFrame(BaseFrame):
+    def __init__(self, parent, *, key: ConfigKey, value: int, attr_name: str,
+                 event_type: Optional[EventType] = None):
+        super().__init__(parent, key, attr_name, event_type)
+        self.var = tk.IntVar(value=max(0, min(100, int(value))))
+        self._bind_trace()
+
+        self.scale = ttk.Scale(
+            self,
+            from_=0,
+            to=100,
+            orient="horizontal",
+            variable=self.var,
+            command=self._on_scale_move  # только обновление label
+        )
+        self.scale.configure(length=132)
+        self.scale.grid(row=0, column=1, sticky="ew", padx=(0, 5), pady=4)
+
+        # Метка вместо entry
+        self.label = ttk.Label(self, text=str(self.var.get()), width=4, anchor="center")
+        self.label.grid(row=0, column=2, sticky="w", padx=(0, 10), pady=4)
+
+        # Обработка отпускания ползунка
+        self.scale.bind("<ButtonRelease-1>", self._on_release)
+
+    def _on_scale_move(self, value: str):
+        val = int(float(value))  # Scale возвращает строку с float
+        self.label.config(text=str(val))  # обновить только визуализацию
+
+    def _on_release(self, event):
+        self._on_var_changed()  # публикуем событие
+
+    def _get_value(self, *_):
+        return self.var.get()
 
 
 class InfoRow(ttk.Frame):
@@ -99,15 +144,39 @@ class InfoRow(ttk.Frame):
 
 
 class SettingsWidgets(ttk.Frame):
-    settings_data: Dict[str, List[Tuple[str, ConfigKey, Union[type, Dict[str, Any]]]]] = {
+    settings_data: Dict[str, List[Dict[str, Any]]] = {
         "Терминал": [
-            ("Показывать терминал при старте программы:", ConfigKey.SHOW_TERMINAL,
-             CheckboxFrame),
-            ("Размер терминала по умолчанию:", ConfigKey.TERMINAL_SIZE, ComboboxFrame, {
-                "Маленький внизу": TERM.SMALL.value,
-                "Средний на 16 строк": TERM.MEDIUM.value,
-                "На весь экран": TERM.LARGE.value
-            }),
+            {
+                "widget_type": CheckboxFrame,
+                "widget_args": {
+                    "key": ConfigKey.SHOW_TERMINAL,
+                    "attr_name": "Показывать терминал при старте программы:",
+                    "event_type": None
+                },
+            },
+            {
+                "widget_type": ComboboxFrame,
+                "widget_args": {
+                    "key": ConfigKey.TERMINAL_SIZE,
+                    "attr_name": "Размер терминала по умолчанию:",
+                    "event_type": None,
+                    "options": {
+                        "Маленький внизу": TERM.SMALL.value,
+                        "Средний на 16 строк": TERM.MEDIUM.value,
+                        "На весь экран": TERM.LARGE.value
+                    },
+                },
+            },
+        ],
+        "Карточки": [
+            {
+                "widget_type": ScaleFrame,
+                "widget_args": {
+                    "key": ConfigKey.CARD_TRANSPARENCY,
+                    "attr_name": "Прозрачность окна:",
+                    "event_type": EventType.VIEW.SETTINGS.CARD_TRANSPARENCY,
+                },
+            },
         ],
     }
 
@@ -135,18 +204,19 @@ class SettingsWidgets(ttk.Frame):
         for section_title, rows in self.settings_data.items():
             section = ttk.LabelFrame(self, text=section_title)
             section.pack(fill="x", padx=10, pady=5, expand=True)
-            section.columnconfigure(0, weight=1)  # вся строка BaseFrame должна растягиваться
+            section.columnconfigure(0, weight=1)
 
             for row in rows:
-                attr_name, key, widget_type, *args = row
-                value = settings.get(key, "")
+                # Распаковка значений из словаря
+                key = row["widget_args"]["key"]
+                widget_type = row["widget_type"]
+                widget_args = dict(row["widget_args"])
+                widget_args["value"] = settings.get(key, "")
 
-                if widget_type is ComboboxFrame:
-                    widget = ComboboxFrame(section, key, value, attr_name, *args)
-                else:
-                    widget = widget_type(section, key, value, attr_name)
+                # Создание виджета с передачей параметров
+                widget = widget_type(section, **widget_args)
 
-                widget.grid(sticky="ew", padx=5, pady=2)  # чтобы строка растягивалась
+                widget.grid(sticky="ew", padx=5, pady=2)
                 self.vars[key] = widget
 
                 widget.bind("<FocusIn>", remove_focus)
