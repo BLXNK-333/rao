@@ -115,6 +115,33 @@ class CardFields(ttk.Frame):
                 # Иногда текстовые поля в readonly могут кидать ошибку — игнорируем
                 pass
 
+    def update_fields(self, card_dict: Dict[str, str]):
+        """Обновляет содержимое всех полей ввода и внутренние данные."""
+        self.data = card_dict
+
+        for key in self.headers:
+            value = card_dict.get(key, "")
+            entry = self.entries.get(key)
+            if entry:
+                # Временно разблокируем, если поле заблокировано
+                state = entry.cget("state")
+                if state == "disabled":
+                    entry.config(state="normal")
+
+                entry.delete("1.0", "end")
+                entry.insert("1.0", value)
+                entry.edit_modified(False)  # Сброс флага модификации
+
+                # Вернём блокировку обратно
+                if key == "ID":
+                    entry.config(state="disabled")
+
+                # Сброс цвета
+                try:
+                    entry.config(bg="white")
+                except tk.TclError:
+                    pass
+
 
 class CardButtons(ttk.Frame):
     def __init__(self, parent: ttk.Frame, editor: "CardEditor"):
@@ -196,8 +223,20 @@ class CardEditor(tk.Toplevel, BaseWindow):
             table: str,
             headers: List[str],
             data: Dict[str, str],
-            transparent_alpha: Union[float, int]
+            transparent_alpha: Union[float, int],
+            unlock_save: bool = False
     ):
+        """
+        Редактор карточки.
+
+        :param parent: Родительский элемент.
+        :param card_key: Сгенерированный ключ открытой карточки, типа "ABCD".
+        :param table: Идентификатор таблицы к которой принадлежит карточка.
+        :param headers: Заголовки для названия полей.
+        :param data: Словарь с данными, ключи как в headers
+        :param transparent_alpha: Степень прозрачности от 0 до 1, чем меньше, тем прозрачнее.
+        :param unlock_save: Разблокировать кнопку "Сохранить", пока карточка не получит ID.
+        """
         super().__init__(parent)
         self.withdraw()
         self.title("Редактировать карточку")
@@ -205,6 +244,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.card_key = card_key
         self.table = table
         self.is_new = not bool(data.get("ID"))
+        self.unlock_save = unlock_save
         self._pinned = False
 
         # Прозрачность
@@ -239,6 +279,10 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.fields.update_id(card_id)
 
     def on_save(self):
+        for widget in self.fields.entries.values():
+            widget.event_generate("<<Modified>>")
+            widget.update_idletasks()
+
         data = self.fields.get_data()
         EventBus.publish(
             Event(event_type=EventType.VIEW.CARD.SAVE),
@@ -253,6 +297,9 @@ class CardEditor(tk.Toplevel, BaseWindow):
 
     def update_save_button_state(self):
         """Обновляет состояние кнопки Save в зависимости от наличия изменений."""
+        if self.unlock_save and not self.get_id():
+            return
+        self.unlock_save = False
         state = self.fields.has_changes()
         if self.get_id() or self.is_new:
             self.buttons.set_save_button_enabled(state)
@@ -335,7 +382,7 @@ class CardManager:
         open_card = self.opened_cards.get(card_key)
         if open_card:
             open_card.is_new = False
-            open_card.fields.data = card_dict
+            open_card.fields.update_fields(card_dict)
             open_card.buttons.set_save_button_enabled(False)
 
     def _open_card(self, table: str, card_dict: Dict[str, str],
@@ -352,7 +399,8 @@ class CardManager:
             table=table,
             headers=headers,
             data=data,
-            transparent_alpha=self._card_transparent_value
+            transparent_alpha=self._card_transparent_value,
+            unlock_save=unlock_save
         )
         self.opened_cards[card_key] = card
         if unlock_save:
@@ -379,7 +427,7 @@ class CardManager:
         open_card = self.opened_cards.get(card_key)
 
         if all(validation_result.values()):
-            open_card.fields.data = open_card.fields.get_data()
+            # Тут закроет карточку сразу после сохранения.
             self._destroy_card(card_key)
         else:
             open_card.fields.highlight_bad_fields(validation_result)

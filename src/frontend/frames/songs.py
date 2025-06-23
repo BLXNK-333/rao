@@ -44,9 +44,6 @@ class SongsTable(Table):
         btn_report.pack(side="right", padx=5)
 
     def add_to_report(self):
-        self.after(0, lambda _=None: self._add_to_report())
-
-    def _add_to_report(self):
         selected = self.data_table.dt.selection()
         if selected:
             card_id = selected[0]

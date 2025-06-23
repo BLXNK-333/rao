@@ -78,7 +78,7 @@ def bootstrap():
     settings = Settings(
         parent=window.content,
         settings=settings,
-        version="1.1.0",
+        version="0.1.0",
         github_url="https://github.com/BLXNK-333/rao"
     )
 
