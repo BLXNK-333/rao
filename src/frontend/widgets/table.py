@@ -25,6 +25,9 @@ class DataTable(ttk.Frame):
         GROUP.REPORT_TABLE: STATE.REPORT_SORT
     }
 
+    oddrow_background = "#e4e7ed"
+    evenrow_background = "#fcfcfc"
+
     # region Initialization and Subscriptions
 
     def __init__(
@@ -131,21 +134,21 @@ class DataTable(ttk.Frame):
 
     def _create_dt(self):
         """Создание ttk.Treeview и скроллбаров."""
-        self.dt = ttk.Treeview(self, show="headings")
+        self.dt = ttk.Treeview(self, show="headings", style="Custom.Treeview")
         self.dt.grid(row=0, column=0, sticky="nsew")
 
         self.scroll_y = ttk.Scrollbar(self, orient="vertical", command=self.dt.yview)
         self.dt.configure(yscrollcommand=self.scroll_y.set)
         self.scroll_y.grid(row=0, column=1, sticky="ns")
 
-        scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.dt.xview)
-        self.dt.configure(xscrollcommand=scroll_x.set)
-        scroll_x.grid(row=1, column=0, sticky="ew")
+        self.scroll_x = ttk.Scrollbar(self, orient="horizontal", command=self.dt.xview)
+        self.dt.configure(xscrollcommand=self.scroll_x.set)
+        self.scroll_x.grid(row=1, column=0, sticky="ew")
 
     def _setup_styles(self):
         """Настройка стилей для строк таблицы."""
-        self.dt.tag_configure("oddrow", background="#ededed")
-        self.dt.tag_configure("evenrow", background="#fcfcfc")
+        self.dt.tag_configure("oddrow", background=self.oddrow_background)
+        self.dt.tag_configure("evenrow", background=self.evenrow_background)
 
     def _render_headers(self):
         """Настройка заголовков колонок и их событий."""
@@ -305,6 +308,23 @@ class DataTable(ttk.Frame):
         for col, (width, stretch) in widths.items():
             self.dt.column(col, width=width, stretch=stretch)
 
+        # 🧠 Проверяем, нужно ли показывать горизонтальный скролл
+        self.after_idle(lambda _=None: self._toggle_horizontal_scrollbar())
+
+    def _toggle_horizontal_scrollbar(self):
+        """Показывает или скрывает горизонтальный скроллбар при необходимости."""
+        self.update_idletasks()
+
+        # Ширина содержимого таблицы
+        total_content_width = sum(
+            self.dt.column(col, option="width") for col in self._headers)
+        visible_width = self.dt.winfo_width()
+
+        if total_content_width > visible_width:
+            self.scroll_x.grid()
+        else:
+            self.scroll_x.grid_remove()
+
     def _publish_cols_state(self, auto_size: bool = False):
         """Публикует событие изменения ширины колонок (ручное или авто)."""
         state_name = self.size_states_map.get(self._group_id)
@@ -440,6 +460,7 @@ class DataTable(ttk.Frame):
 class TablePanel(ttk.Frame):
     # ICON BLUE COLOR = #29B6F6
     # ICON RED COLOR = "#E94B4B"
+    button_activebackground = "#e2e5eb"
 
     def __init__(
             self,
@@ -484,7 +505,7 @@ class TablePanel(ttk.Frame):
             container,
             image=self.icons[icon],
             command=command,
-            activebackground="#e3e3e3",  # Можно задать любой цвет для hover
+            activebackground=self.button_activebackground,  # Можно задать любой цвет для hover
             tooltip_text=tooltip
         )
         btn.pack(side="left", padx=2)
@@ -511,7 +532,7 @@ class TablePanel(ttk.Frame):
             image_off=self.icons[ICON.AUTO_SIZE_OFF_24],
             initial_state=False,
             command=self.on_auto_size_applied,
-            activebackground="#e7e7e7",
+            activebackground=self.button_activebackground,
             tooltip_text="Растянуть колонки по содержимому"
         )
 

@@ -1,5 +1,6 @@
 from ttkthemes import ThemedStyle
 
+# Стили для текстовых полей карточки
 TEXT_STYLES = {
     "wrap": "word",
     "font": ("Helvetica", 11),
@@ -8,8 +9,8 @@ TEXT_STYLES = {
     "insertontime": 500,
     "insertofftime": 500,
     "insertbackground": "#444444",  # Цвет курсора
-    "selectbackground": "#a3d1e5",  # Синий фон выделения
-    "selectforeground": "#333444",  # Белый текст при выделении
+    "selectbackground": "#abd3e5",  # Синий фон выделения
+    "selectforeground": "#333333",  # Белый текст при выделении
     "relief": "flat",
     "bd": 1
 }
@@ -58,6 +59,11 @@ class UIStyles(ThemedStyle):
         self.configure("Treeview.Heading",
                        font=("Arial", 10, "bold"))
 
+        # Цвет выделения
+        self.map("Treeview",
+                  background=[("selected", "#54a7d9")],
+                  foreground=[("selected", "#ffffff")])
+
     def configure_card_styles(self):
         """Настраивает стили для Card"""
         # Метки (Label)
@@ -66,40 +72,42 @@ class UIStyles(ThemedStyle):
                        padding=(5, 2))
 
     def configure_menu_style(self):
-        """Настраивает стиль для верхней панели для светлой темы"""
+        """Настраивает стиль для верхней панели и вкладок"""
 
-        # Верхняя панель с белым фоном
-        self.configure("MenuBar.TFrame", background="#dbdbdb")
-        self.configure("Toggler.TLabel", background="#dbdbdb")
+        # 🔷 Верхняя тёмная панель (заголовок)
+        self.configure("MenuBar.TFrame", background="#3a3f44")
+        self.configure("Toggler.TLabel", background="#3a3f44", foreground="#f6f6f6")
 
-        # Настройка вкладки (неактивной)
-        self.configure("Tab.TFrame", background="#c9c9c9")
-        self.configure("Tab.TLabel", background="#c9c9c9", foreground="#444444",
-                       font=("Segoe UI", 12))
+        # 🔷 Панель кнопок (Toolbar)
+        self.configure("Toolbar.TFrame", background="#3a3f44")
+        self.configure("Toolbar.TLabel", background="#3a3f44", foreground="#f6f6f6")
 
-        self.configure("TabHover.TFrame", background="#d0d0d0")  # цвет при hover
-        self.configure("TabHover.TLabel", background="#d0d0d0", foreground="#444444",
-                       font=("Segoe UI", 12))
+        # ⚪ Неактивные вкладки
+        self.configure("Tab.TFrame", background="#3a3f44")
+        self.configure("Tab.TLabel", background="#3a3f44", foreground="#f6f6f6")
 
-        # Настройка активной вкладки
-        self.configure("ActiveTab.TFrame",
-                       background="#e5e5e5")  # светлый серый фон для активной вкладки
-        self.configure("ActiveTab.TLabel", background="#e5e5e5", foreground="black",
+        # 🔘 Hover по вкладке
+        self.configure("TabHover.TFrame", background="#4a525a")
+        self.configure("TabHover.TLabel", background="#4a525a", foreground="#f6f6f6")
+
+        # 🔹 Активная вкладка
+        self.configure("ActiveTab.TFrame", background="#4f9fcf")
+        self.configure("ActiveTab.TLabel", background="#4f9fcf", foreground="#f6f6f6",
                        font=("Segoe UI", 12))
 
     def configure_term_panel_style(self):
         """Настраивает стили для панели терминала"""
-        self.configure("TermPanel.TFrame", background="#dbdbdb")
-        self.configure("TermPanel.TLabel", background="#dbdbdb", foreground="black",
+        self.configure("TermPanel.TFrame", background="#44494f")
+        self.configure("TermPanel.TLabel", background="#44494f", foreground="#fdfdfd",
                        font=("Arial", 10))
 
     def configure_tooltip_style(self):
         """Настраивает стили подсказок заголовков таблицы."""
         self.configure(
             "CustomTooltip.TLabel",
-            background="#ededed",
-            foreground="#333333",
-            font=("Segoe UI", 9),
+            background="#e4ebee",
+            foreground="#222222",
+            font=("Arial", 10),
             padding=(8, 4),
             relief="flat",
             borderwidth=1

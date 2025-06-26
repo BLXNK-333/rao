@@ -170,6 +170,14 @@ class SettingsWidgets(ttk.Frame):
         ],
         "Карточки": [
             {
+                "widget_type": CheckboxFrame,
+                "widget_args": {
+                    "key": ConfigKey.CARD_PIN,
+                    "attr_name": "Закреплять карточки при открытии:",
+                    "event_type": EventType.VIEW.SETTINGS.CARD_PIN
+                },
+            },
+            {
                 "widget_type": ScaleFrame,
                 "widget_args": {
                     "key": ConfigKey.CARD_TRANSPARENCY,
@@ -241,14 +249,14 @@ class Settings(ttk.Frame):
             self,
             parent: ttk.Frame,
             settings: Dict[ConfigKey, Any],
-            version: str = "Неофициальная сборка",
+            version: str = "0.0.0",
             github_url: str = ""
     ):
         super().__init__(parent)
         self.configure_grid()
 
         self.scrolled = ScrolledFrame(parent=self)
-        self.scrolled.grid(row=0, column=0, sticky="nsew")
+        self.scrolled.grid(row=0, column=0, sticky="nsew", pady=(10, 0))
 
         self.widgets = SettingsWidgets(
             parent=self.scrolled.content,

@@ -77,6 +77,7 @@ class ConfigKey(str, Enum):
     SHOW_TERMINAL = "SHOW_TERMINAL"
     TERMINAL_SIZE = "TERMINAL_SIZE"
     CARD_TRANSPARENCY = "CARD_TRANSPARENCY"
+    CARD_PIN = "CARD_PIN"
     # etc.
 
 
@@ -149,6 +150,7 @@ class EventType:
         class SETTINGS:
             ON_CHANGE = "VIEW.SETTING.ON_CHANGE"
             CARD_TRANSPARENCY = "VIEW.SETTING.CARD_TRANSPARENCY"
+            CARD_PIN = "VIEW.SETTING.CARD_PIN"
 
         class UI:
             CLOSE_WINDOW = "VIEW.UI.CLOSE_WINDOW"

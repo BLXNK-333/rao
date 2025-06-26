@@ -4,7 +4,7 @@ import copy
 
 import tkinter as tk
 from tkinter import ttk
-from typing import List, Dict, Callable, Union
+from typing import List, Dict, Callable, Union, Optional
 
 from .widgets import BaseWindow, ScrolledFrame, UndoText, ToggleButton
 from ..icons import Icons
@@ -14,6 +14,7 @@ from ...enums import EventType, DispatcherType, HEADER, ICON
 
 class CardFields(ttk.Frame):
     """Отвечает за создание и управление полями ввода"""
+    BAD_FIELD_HIGHLIGHT = "#ffd2da"
 
     def __init__(
             self,
@@ -108,7 +109,7 @@ class CardFields(ttk.Frame):
                 continue
 
             is_valid = fields_map.get(field, True)
-            new_color = "#ffd2da" if not is_valid else "white"
+            new_color = self.BAD_FIELD_HIGHLIGHT if not is_valid else "white"
             try:
                 widget.config(bg=new_color)
             except tk.TclError:
@@ -224,6 +225,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
             headers: List[str],
             data: Dict[str, str],
             transparent_alpha: Union[float, int],
+            pinned: bool = False,
             unlock_save: bool = False
     ):
         """
@@ -235,6 +237,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         :param headers: Заголовки для названия полей.
         :param data: Словарь с данными, ключи как в headers
         :param transparent_alpha: Степень прозрачности от 0 до 1, чем меньше, тем прозрачнее.
+        :param pinned: Закрепить карточку при открытии.
         :param unlock_save: Разблокировать кнопку "Сохранить", пока карточка не получит ID.
         """
         super().__init__(parent)
@@ -245,7 +248,7 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.table = table
         self.is_new = not bool(data.get("ID"))
         self.unlock_save = unlock_save
-        self._pinned = False
+        self._pinned = pinned or False
 
         # Прозрачность
         self.is_transparent = False
@@ -270,6 +273,10 @@ class CardEditor(tk.Toplevel, BaseWindow):
         self.grid_columnconfigure(0, weight=1)
 
         geometry = self.geometry_map.get(HEADER(table))
+        if self._pinned:
+            self.attributes("-topmost", True)
+            self.buttons.pin_btn.toggle()
+
         self.show_centered(geometry)
 
     def get_id(self):
@@ -322,12 +329,16 @@ class CardManager:
     def __init__(
             self,
             parent: tk.Frame,
-            default_card_values: Dict[HEADER, Dict[str, str]]
+            default_card_values: Dict[HEADER, Dict[str, str]],
+            card_transparent_value: int = 85,
+            card_pin = False
     ):
         self.parent = parent
         self.opened_cards: Dict[str, CardEditor] = {}
         self.default_values = default_card_values
-        self._card_transparent_value = 0.72
+        self._card_transparent_value = card_transparent_value
+        self._set_card_transparent_value(card_transparent_value)
+        self._card_pin = card_pin
 
         self.subscribe()
 
@@ -339,7 +350,8 @@ class CardManager:
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
             (EventType.BACK.DB.CARD_ID, self._update_card_id),
             (EventType.BACK.DB.VALIDATION, self._highlight_bad_fields),
-            (EventType.VIEW.SETTINGS.CARD_TRANSPARENCY, self._set_card_transparent_value)
+            (EventType.VIEW.SETTINGS.CARD_TRANSPARENCY, self._set_card_transparent_value),
+            (EventType.VIEW.SETTINGS.CARD_PIN, self._set_card_pin)
         ]
 
         for event, handler in subscriptions:
@@ -355,6 +367,9 @@ class CardManager:
 
     def _set_card_transparent_value(self, value: int):
         self._card_transparent_value = round(value / 100, 2)
+
+    def _set_card_pin(self, value: bool):
+        self._card_pin = value
 
     def _del_card_ids(self, card_ids: List[str], _table: str):
         for_del = set(card_ids)
@@ -400,6 +415,7 @@ class CardManager:
             headers=headers,
             data=data,
             transparent_alpha=self._card_transparent_value,
+            pinned=self._card_pin,
             unlock_save=unlock_save
         )
         self.opened_cards[card_key] = card

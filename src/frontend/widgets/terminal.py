@@ -32,7 +32,11 @@ class Terminal(ttk.Frame):
 
 
 class TermPanel(ttk.Frame):
-    widget_color = "#dbdbdb"
+    widget_color = "#44494f"
+    btn_activebackground = "#626973"
+    # 61B6E9
+    # cbcbcb
+    # fdfdfd
 
     def __init__(self, parent: ttk.Frame):
         super().__init__(parent, style="TermPanel.TFrame")
@@ -59,7 +63,7 @@ class TermPanel(ttk.Frame):
     def create_widget(self) -> None:
         """Создаёт заголовок и кнопки управления."""
         label = ttk.Label(self, text="Терминал", style="TermPanel.TLabel")
-        label.pack(side="left", padx=10)
+        label.pack(side="left", padx=10, pady=(5, 0))
 
         # Кнопки управления
         icons_map = [
@@ -75,7 +79,7 @@ class TermPanel(ttk.Frame):
                 self,
                 image=self.icons[icon], command=command,
                 background=self.widget_color,
-                activebackground="#c9c9c9"
+                activebackground=self.btn_activebackground
             )
             btn.pack(side="right", padx=5, pady=3)
             self.buttons[key] = btn
@@ -161,6 +165,7 @@ class TermLogger(ttk.Frame):
     BACKGROUND = "#1a1a1a"
     FOREGROUND = "white"
     SELECTBACKGROUND = "#37414F"
+    BORDER_COLOR = "#525455" # цвет рамки (неактивной)
 
     def __init__(self, parent: ttk.Frame):
         super().__init__(parent)
@@ -198,8 +203,8 @@ class TermLogger(ttk.Frame):
             bd=0,
             selectbackground=self.SELECTBACKGROUND,  # Цвет фона выделения
             highlightthickness=1,
-            highlightbackground="#555555",  # цвет рамки (неактивной)
-            highlightcolor="#555555",
+            highlightbackground=self.BORDER_COLOR,  # цвет рамки (неактивной)
+            highlightcolor=self.BORDER_COLOR,
             padx = 5,  # горизонтальный отступ текста
             pady = 5  # вертикальный отступ текста
         )

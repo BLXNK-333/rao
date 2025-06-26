@@ -361,7 +361,7 @@ class ContextMenuMixin(tk.Widget):
     the mixin functionality.
     """
 
-    _menu_activebackground = "#a3d1e5" if sys.platform == "win32" else "#c9c9c9"
+    _menu_activebackground = "#bacfd7"
 
     def enable_context_menu(self):
         self._suppress_focus_out = False

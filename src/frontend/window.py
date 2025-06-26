@@ -63,7 +63,7 @@ class Window(tk.Tk, BaseWindow):
         self.card_manager = card_manager
 
         # Настройки размещения меню фреймов (0 строка в сетке)
-        menu.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        menu.grid(row=0, column=0, sticky="ew")
 
         # Настройки размещения для фрейма терминала (2 строка в сетке)
         if self.terminal_visible:

@@ -3,8 +3,8 @@ from .frontend.window import Window
 
 from .backend.db.order_map import DEFAULT_CARD_VALUES, FIELD_MAPS
 
-from .frontend.frames import SongsTable, Report, Export, Settings
-from .frontend.widgets import Terminal, Table, CardManager, TopMenu, TooltipManager
+from .frontend.frames import SongsTable, ReportTable, Export, Settings
+from .frontend.widgets import Terminal, CardManager, TopMenu, TooltipManager
 from .frontend.icons.icon_map import Icons, ICON
 from .frontend.style import UIStyles
 from .frontend.bindings import apply_global_bindings
@@ -28,14 +28,14 @@ def bootstrap():
     songs_table_sort_state = backend.sync_db.get_state(STATE.SONGS_SORT)
     report_table_sort_state = backend.sync_db.get_state(STATE.REPORT_SORT)
 
-    settings = backend.sync_db.get_settings()
+    settings_dict = backend.sync_db.get_settings()
 
     # -------------------------------
     # UI initialization
     # -------------------------------
     window = Window(
-        terminal_visible=settings.get(ConfigKey.SHOW_TERMINAL),
-        terminal_state=settings.get(ConfigKey.TERMINAL_SIZE)
+        terminal_visible=settings_dict.get(ConfigKey.SHOW_TERMINAL),
+        terminal_state=settings_dict.get(ConfigKey.TERMINAL_SIZE)
     )
     icons = Icons()
     UIStyles(window)
@@ -53,13 +53,13 @@ def bootstrap():
         data=backend.sync_db.get_all_rows(HEADER.SONGS),
         stretchable_column_indices=[1, 2, 4, 5, 6],
         enable_tooltips=False,
-        default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         show_table_end=False,
+        default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         prev_cols_state=songs_table_cols_state,
         sort_key_state=songs_table_sort_state
     )
 
-    report = Table(
+    report = ReportTable(
         parent=window.content,
         group_id=GROUP.REPORT_TABLE,
         header_map=FIELD_MAPS.get(HEADER.REPORT),
@@ -77,14 +77,16 @@ def bootstrap():
     )
     settings = Settings(
         parent=window.content,
-        settings=settings,
-        version="0.1.0",
+        settings=settings_dict,
+        version="0.2.0",
         github_url="https://github.com/BLXNK-333/rao"
     )
 
     card_manager = CardManager(
         parent=window.content,
-        default_card_values=DEFAULT_CARD_VALUES
+        default_card_values=DEFAULT_CARD_VALUES,
+        card_transparent_value=settings_dict.get(ConfigKey.CARD_TRANSPARENCY),
+        card_pin=settings_dict.get(ConfigKey.CARD_PIN)
     )
 
     terminal = Terminal(

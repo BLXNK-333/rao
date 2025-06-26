@@ -1,6 +1,8 @@
+import sys
 from typing import List, Dict, Any, Optional, Tuple
 
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 
 from ..widgets import Table
@@ -8,7 +10,7 @@ from ...eventbus import EventBus, Event
 from ...enums import GROUP, EventType
 
 
-class SongsTable(Table):
+class ReportTable(ttk.Frame):
     def __init__(
             self,
             parent,
@@ -17,34 +19,63 @@ class SongsTable(Table):
             data: List[List[str]],
             stretchable_column_indices: List[int],
             enable_tooltips: bool,
-            default_report_values: Dict[str, Any],
             show_table_end: bool,
             prev_cols_state: Optional[Dict[str, int]] = None,
             sort_key_state: Optional[Tuple[str, int, str]] = None
     ):
-        super().__init__(parent, group_id, header_map, data, stretchable_column_indices,
-                         enable_tooltips, show_table_end, prev_cols_state, sort_key_state)
+        super().__init__(parent)
+        self.configure_grid()
 
+        self.table = Table(
+            self, group_id, header_map, data, stretchable_column_indices,
+            enable_tooltips, show_table_end, prev_cols_state, sort_key_state,
+        )
+        self.table.grid(row=0, column=0, sticky="nsew", pady=(3, 0))
+
+    def configure_grid(self):
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+
+
+class SongsTable(ReportTable):
+    def __init__(
+            self,
+            parent,
+            group_id: GROUP,
+            header_map: Dict[str, str],
+            data: List[List[str]],
+            stretchable_column_indices: List[int],
+            enable_tooltips: bool,
+            show_table_end: bool,
+            default_report_values: Dict[str, Any],
+            prev_cols_state: Optional[Dict[str, int]] = None,
+            sort_key_state: Optional[Tuple[str, int, str]] = None
+    ):
+        super().__init__(
+            parent, group_id, header_map, data, stretchable_column_indices,
+            enable_tooltips, show_table_end, prev_cols_state, sort_key_state
+        )
         self._default_report_values = default_report_values
         self._create_add_to_report_button()
 
     def _create_add_to_report_button(self):
         # Кнопка "В отчёт"
+        pady = 0 if sys.platform == "win32" else 3
         btn_report = tk.Button(
-            self.table_panel.container,
+            self.table.table_panel.container,
             text="В отчет",
-            bg="#4CAF50",  # зелёный фон
+            bg="#16a085",  # зелёный фон
             fg="white",  # белый текст
-            activebackground="#45a049",  # фон при наведении
-            font=("Segoe UI", 10, "bold"),
+            activebackground="#138d75",  # фон при наведении
+            font=("Segoe UI", 11, "bold"),
             relief="flat",
             command=self.add_to_report,
-            padx=12, pady=3,
+            padx=12, pady=pady,
         )
         btn_report.pack(side="right", padx=5)
 
     def add_to_report(self):
-        selected = self.data_table.dt.selection()
+        selected = self.table.data_table.dt.selection()
         if selected:
             card_id = selected[0]
         else:
@@ -53,7 +84,10 @@ class SongsTable(Table):
                 "Пожалуйста, выберите песню для добавления в отчёт.")
             return
 
-        song = dict(zip(self.data_table._headers, self.buffer.original_data.get(card_id)))
+        song = dict(zip(
+            self.table.data_table._headers,
+            self.table.buffer.original_data.get(card_id)
+        ))
         data = self._default_report_values.copy()
 
         data["Исполнитель"] = song["Исполнитель"]

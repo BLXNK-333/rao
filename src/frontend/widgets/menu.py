@@ -21,7 +21,8 @@ class Tab(ttk.Frame):
             text=text,
             image=image,
             compound="left",
-            style="Tab.TLabel"
+            style="Tab.TLabel",
+            font=("Segoe UI", 12)
         )
         # Паддинги для label внутри tab
         self.label.pack(fill='both', expand=True, padx=10, pady=5)

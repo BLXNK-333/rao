@@ -1,4 +1,3 @@
-from .songs import SongsTable
-from .report import Report
+from .tables import ReportTable, SongsTable
 from .export import Export
 from .settings import Settings
