@@ -114,7 +114,7 @@ def bootstrap():
     # -------------------------------
     # Window initial layout
     # -------------------------------
-    window.switch_frame(songs)
+    window.switch_frame("Песни")
     window.setup_layout(menu=menu, terminal=terminal, card_manager=card_manager)
 
     # -------------------------------

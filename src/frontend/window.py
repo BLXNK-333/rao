@@ -1,4 +1,4 @@
-from typing import cast, Optional, Union
+from typing import cast, Optional, Union, Dict
 import sys
 from pathlib import Path
 
@@ -37,6 +37,7 @@ class Window(tk.Tk, BaseWindow):
         self.content.grid_rowconfigure(0, weight=1)
         self.content.grid_columnconfigure(0, weight=1)
 
+        self.frame_map: Dict[str, ttk.Frame] = {}
         self.current_frame = None
         self.terminal = None                # (установить после через self.setup_layout)
 
@@ -65,6 +66,9 @@ class Window(tk.Tk, BaseWindow):
         # Настройки размещения меню фреймов (0 строка в сетке)
         menu.grid(row=0, column=0, sticky="ew")
 
+        for name, frame in menu.frames.items():
+            self._register_frame(name, frame)
+
         # Настройки размещения для фрейма терминала (2 строка в сетке)
         if self.terminal_visible:
             if self.terminal_state == TERM.LARGE:
@@ -72,6 +76,11 @@ class Window(tk.Tk, BaseWindow):
             self.display_terminal()
 
         self.show_centered(geometry=self._geometry)
+
+    def _register_frame(self, name: str, frame: ttk.Frame):
+        self.frame_map[name] = frame
+        frame.grid(row=0, column=0, sticky="nsew")
+        frame.lower()  # Сначала скрываем
 
     def _set_icon(self):
         """
@@ -90,12 +99,11 @@ class Window(tk.Tk, BaseWindow):
     def display_terminal(self):
         self.terminal.grid(row=2, column=0, sticky="nsew")
 
-    def switch_frame(self, target_frame: ttk.Frame):
+    def switch_frame(self, name: str):
+        target_frame = self.frame_map.get(name)
         if target_frame == self.current_frame:
             return
-        if self.current_frame:
-            self.current_frame.grid_forget()
-        target_frame.grid(row=0, column=0, sticky="nsew")
+        target_frame.lift()
         self.current_frame = target_frame
 
     def resize_grid(self, size: TERM):
