@@ -57,6 +57,9 @@ class SongsTable(ReportTable):
         )
         self._default_report_values = default_report_values
         self._create_add_to_report_button()
+        self.table.data_table._context_menu.add_separator()
+        self.table.data_table._context_menu.add_command(
+            label="В отчет", command=self.add_to_report)
 
     def _create_add_to_report_button(self):
         # Кнопка "В отчёт"

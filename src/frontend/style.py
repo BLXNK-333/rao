@@ -15,6 +15,14 @@ TEXT_STYLES = {
     "bd": 1
 }
 
+CONTEXT_MENU_STYLES = {
+    "activeborderwidth": 0,
+    "bd": 1,
+    "font": ("Helvetica", 11),
+    "activeforeground": "#ffffff",
+    "activebackground": "#54a7d9"
+}
+
 
 class UIStyles(ThemedStyle):
     def __init__(self, root):

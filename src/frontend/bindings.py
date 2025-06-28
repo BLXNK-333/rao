@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from .utils import FioInserter
+from .style import CONTEXT_MENU_STYLES
 
 
 def apply_global_bindings(root: tk.Tk):
@@ -363,8 +364,6 @@ class ContextMenuMixin(tk.Widget):
     the mixin functionality.
     """
 
-    _menu_activebackground = "#bacfd7"
-
     def enable_context_menu(self):
         self._suppress_focus_out = False
         self.bind("<FocusOut>", self._on_focus_out)
@@ -398,13 +397,7 @@ class ContextMenuMixin(tk.Widget):
 
     def _add_context_menu(self):
         menu = tk.Menu(self, tearoff=0)
-        menu.configure(
-            activeborderwidth=0,
-            bd=1,
-            font=("Helvetica", 11),
-            activeforeground="#222333",
-            activebackground=self._menu_activebackground,
-        )
+        menu.configure(**CONTEXT_MENU_STYLES)
 
         def select_all():
             event = tk.Event()

@@ -1,7 +1,5 @@
 import logging
-import time
-from typing import List, Dict, Set, Tuple, Optional, Union
-from datetime import datetime
+from typing import List, Dict, Set, Tuple, Optional
 
 import tkinter as tk
 import tkinter.messagebox as messagebox
@@ -10,6 +8,7 @@ import tkinter.font as tkFont
 
 from .widgets import UndoEntry, ToggleButton, HoverButton
 from ..icons import Icons
+from ..style import CONTEXT_MENU_STYLES
 from ...eventbus import Subscriber, EventBus, Event
 from ...enums import EventType, DispatcherType, GROUP, ICON, STATE
 
@@ -43,7 +42,8 @@ class DataTable(ttk.Frame):
         super().__init__(parent)
 
         self._group_id = group_id.value
-        self.dt = None
+        self.dt: Optional[ttk.Treeview] = None
+        self._context_menu: Optional[tk.Menu] = None
         self._headers = headers
         self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
         self._show_table_end: bool = show_table_end
@@ -65,14 +65,8 @@ class DataTable(ttk.Frame):
         )
 
         self.create_table(headers, data)
-
         # Scroll to the table bottom
         self.scroll_to_bottom(rows=data, is_full=True)
-
-        if sort_key and sort_key[1] != "":
-            prev = {0: -1, 1: 0, -1: 1}
-            self._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
-            self._set_arrow(sort_key[0], sort_key[1])
 
         self.subscribe()
 
@@ -111,6 +105,16 @@ class DataTable(ttk.Frame):
         self._fill_table(data)
         self._adjust_column_widths()
         self._apply_bindings()
+        self._render_sort_arrow()
+        self._create_context_menu()
+
+    def _create_context_menu(self):
+        """Создаёт контекстное меню для таблицы."""
+        self._context_menu = tk.Menu(self, tearoff=0)
+        self._context_menu.configure(**CONTEXT_MENU_STYLES)
+        self._context_menu.add_command(label="Открыть", command=self._open_selected_row)
+        self._context_menu.add_command(label="Клонировать", command=self._clone_selected_row)
+        self._context_menu.add_command(label="Удалить", command=self._delete_selected_rows)
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:
@@ -162,6 +166,13 @@ class DataTable(ttk.Frame):
             )
             self.dt.column(col, anchor="w", width=100, stretch=False)
 
+    def _render_sort_arrow(self):
+        sort_key = self._sort_key
+        if sort_key and sort_key[1] != "":
+            prev = {0: -1, 1: 0, -1: 1}
+            self._sort_key = (sort_key[0], sort_key[1], prev[sort_key[2]])
+            self._set_arrow(sort_key[0], sort_key[1])
+
     def _apply_bindings(self):
         """Привязка событий к виджету таблицы."""
         self.dt.bind("<Return>", self._open_selected_row)
@@ -170,6 +181,9 @@ class DataTable(ttk.Frame):
         self.dt.bind("<ButtonRelease-1>", self._on_mouse_release)
         self.dt.bind("<Delete>", self._delete_selected_rows)
         self.dt.bind("<Configure>", self._resize_columns)
+        self.dt.bind("<Escape>", self._clear_selection)
+
+        self.dt.bind("<Button-3>", self._on_right_click)  # контекстное меню
 
     # endregion
 
@@ -202,6 +216,18 @@ class DataTable(ttk.Frame):
             if is_changed:
                 self._publish_cols_state()
             self._resize_columns()
+
+    def _on_right_click(self, event):
+        """Обработка правого клика мыши."""
+        row_id = self.dt.identify_row(event.y)
+        if not row_id:
+            return  # клик вне строки
+
+        # Проверка: не менять выделение, если строка уже выделена
+        if row_id not in self.dt.selection():
+            self.dt.selection_set(row_id)
+
+        self._context_menu.tk_popup(event.x_root, event.y_root)
 
     def on_header_click(self, col_index: int, col_name: str):
         """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""
@@ -391,6 +417,11 @@ class DataTable(ttk.Frame):
         for index, iid in enumerate(self.dt.get_children()):
             tag = self._get_tag(index)
             self.dt.item(iid, tags=(tag,))
+
+    def _clear_selection(self, event=None):
+        """Снимает выделение и сбрасывает фокус с таблицы."""
+        self.dt.selection_set(())
+        self.dt.focus("")
 
     def _open_selected_row(self, event=None):
         """Обрабатывает открытие строки по Enter или двойному клику."""
