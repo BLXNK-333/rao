@@ -2,6 +2,8 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 
+from .utils import FioInserter
+
 
 def apply_global_bindings(root: tk.Tk):
     """Глобальные бинды: Ctrl+A, Ctrl+V, Ctrl+C, фокус и клавиша Enter на кнопках,
@@ -414,6 +416,16 @@ class ContextMenuMixin(tk.Widget):
                          command=lambda: self.event_generate("<<Copy>>"))
         menu.add_command(label="Вставить",
                          command=lambda: self.event_generate("<<Paste>>"))
+
+        menu.add_separator()
+        menu.add_command(
+            label="Вставить ФИО",
+            command=lambda _=None: FioInserter(self).insert_lfm()
+        )
+        menu.add_command(
+            label="Вставить ИОФ",
+            command=lambda _=None: FioInserter(self).insert_ifl()
+        )
         menu.add_separator()
         menu.add_command(label="Выделить всё", command=select_all)
 
