@@ -82,7 +82,7 @@ class MenuBar(ttk.Frame):
         tab = Tab(self, text=text, image=image, command=self._on_tab_click)
         tab.pack(**self.tab_pack_opts)
         self.tabs.append(tab)
-        self.frames[text] = frame
+        self.frames[tab] = frame
 
         if len(self.tabs) == 1:
             self.set_active(tab)
@@ -100,7 +100,7 @@ class MenuBar(ttk.Frame):
         tab.set_active()
 
         if self.on_tab_selected:
-            self.on_tab_selected(tab.text)
+            self.on_tab_selected(self.frames[tab])
 
     def _synchronize_tab_size(self):
         """Делает все вкладки одинаковыми по размеру."""
