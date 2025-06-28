@@ -10,7 +10,26 @@ from ...eventbus import EventBus, Event
 from ...enums import GROUP, EventType
 
 
-class ReportTable(ttk.Frame):
+class TableWrapper(ttk.Frame):
+    COLUMN_MAP = {
+        GROUP.SONGS_TABLE: {
+            "Исполнитель": "Исполнитель",
+            "Название": "Название",
+            "Время": "Время",
+            "Композитор": "Композитор",
+            "Автор текста": "Автор текста",
+            "Лэйбл": "Лэйбл"
+        },
+        GROUP.REPORT_TABLE: {
+            "Исполнитель": "Исполнитель",
+            "Название": "Название",
+            "Общий хронометраж": "Время",
+            "Композитор": "Композитор",
+            "Автор текста": "Автор текста",
+            "Лэйбл": "Лэйбл"
+        }
+    }
+
     def __init__(
             self,
             parent,
@@ -32,12 +51,34 @@ class ReportTable(ttk.Frame):
         )
         self.table.grid(row=0, column=0, sticky="nsew", pady=(3, 0))
 
+        # Создаем дополнительные секции для контекстного меню.
+        self.table.data_table.context_menu.add_separator()
+        for orig_key, mod_key in self.COLUMN_MAP.get(group_id, {}).items():
+            self.table.data_table.context_menu.add_command(
+                label=f"-- {mod_key[:15].lower()}",
+                command=lambda k=orig_key: self._get_field_value(k)
+            )
+
+    def _get_field_value(self, key: str):
+        selected_items = self.table.data_table.dt.selection()
+        original_id = selected_items[0]
+        data = dict(zip(
+            self.table.data_table._headers,
+            self.table.data_table.dt.item(original_id, "values")
+        ))
+        self.clipboard_clear()
+        self.clipboard_append(data.get(key, ""))
+
     def configure_grid(self):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
 
-class SongsTable(ReportTable):
+class ReportTable(TableWrapper):
+    pass
+
+
+class SongsTable(TableWrapper):
     def __init__(
             self,
             parent,
@@ -55,10 +96,12 @@ class SongsTable(ReportTable):
             parent, group_id, header_map, data, stretchable_column_indices,
             enable_tooltips, show_table_end, prev_cols_state, sort_key_state
         )
+        # Создаем дополнительную кнопку "В отчет".
         self._default_report_values = default_report_values
         self._create_add_to_report_button()
-        self.table.data_table._context_menu.add_separator()
-        self.table.data_table._context_menu.add_command(
+
+        self.table.data_table.context_menu.add_separator()
+        self.table.data_table.context_menu.add_command(
             label="В отчет", command=self.add_to_report)
 
     def _create_add_to_report_button(self):

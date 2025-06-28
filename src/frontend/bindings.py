@@ -62,8 +62,11 @@ def _on_select_all(event):
     return "break"
 
 
-def _on_copy(event, root):
-    widget = event.widget
+def _on_copy(event):
+    _on_copy_handler(event.widget)
+
+
+def _on_copy_handler(widget: tk.Widget):
     try:
         if isinstance(widget, tk.Text):
             text = widget.get("sel.first", "sel.last")
@@ -71,17 +74,20 @@ def _on_copy(event, root):
             text = widget.selection_get()
         else:
             return "break"
-        root.clipboard_clear()
-        root.clipboard_append(text)
+        widget.clipboard_clear()
+        widget.clipboard_append(text)
     except Exception:
         pass
     return "break"
 
 
-def _on_paste(event, root):
-    widget = event.widget
+def _on_paste(event):
+    _on_paste_handler(event.widget)
+
+
+def _on_paste_handler(widget: tk.Widget):
     try:
-        text = root.clipboard_get()
+        text = widget.clipboard_get()
     except Exception:
         return "break"
 
@@ -112,8 +118,11 @@ def _on_paste(event, root):
     return "break"
 
 
-def _on_cut(event, root):
-    widget = event.widget
+def _on_cut(event):
+    _on_cut_handler(event.widget)
+
+
+def _on_cut_handler(widget: tk.Widget):
     try:
         if isinstance(widget, tk.Text):
             text = widget.get("sel.first", "sel.last")
@@ -125,8 +134,8 @@ def _on_cut(event, root):
             widget.delete(sel_start, sel_end)
         else:
             return "break"
-        root.clipboard_clear()
-        root.clipboard_append(text)
+        widget.clipboard_clear()
+        widget.clipboard_append(text)
     except Exception:
         pass
     return "break"
@@ -218,7 +227,7 @@ def _on_triple_click(event):
     return "break"
 
 
-def _move_insert_to_sel_end(widget):
+def _move_insert_to_sel_end(widget: tk.Widget):
     try:
         if isinstance(widget, tk.Text):
             sel_end = widget.index("sel.last")
@@ -306,12 +315,12 @@ def _setup_on_linux(root: tk.Tk):
     for cls in ["TEntry", "TCombobox", "Text"]:
         root.bind_class(cls, "<Control-a>", _on_select_all)
         root.bind_class(cls, "<Control-A>", _on_select_all)
-        root.bind_class(cls, "<Control-c>", lambda e: _on_copy(e, root))
-        root.bind_class(cls, "<Control-C>", lambda e: _on_copy(e, root))
-        root.bind_class(cls, "<Control-v>", lambda e: _on_paste(e, root))
-        root.bind_class(cls, "<Control-V>", lambda e: _on_paste(e, root))
-        root.bind_class(cls, "<Control-x>", lambda e: _on_cut(e, root))
-        root.bind_class(cls, "<Control-X>", lambda e: _on_cut(e, root))
+        root.bind_class(cls, "<Control-c>", lambda e: _on_copy(e))
+        root.bind_class(cls, "<Control-C>", lambda e: _on_copy(e))
+        root.bind_class(cls, "<Control-v>", lambda e: _on_paste(e))
+        root.bind_class(cls, "<Control-V>", lambda e: _on_paste(e))
+        root.bind_class(cls, "<Control-x>", lambda e: _on_cut(e))
+        root.bind_class(cls, "<Control-X>", lambda e: _on_cut(e))
 
 
 def _setup_on_windows(root: tk.Tk):
@@ -323,11 +332,11 @@ def _setup_on_windows(root: tk.Tk):
             if event.keycode == 65:  # Ctrl+A
                 return _on_select_all(event)
             elif event.keycode == 67:  # Ctrl+C
-                return _on_copy(event, root)
+                return _on_copy(event)
             elif event.keycode == 86:  # Ctrl+V
-                return _on_paste(event, root)
+                return _on_paste(event)
             elif event.keycode == 88:  # Ctrl+X
-                return _on_cut(event, root)
+                return _on_cut(event)
 
         return None
 
@@ -404,20 +413,30 @@ class ContextMenuMixin(tk.Widget):
             event.widget = self
             _on_select_all(event)
 
-        menu.add_command(label="Вырезать", command=lambda: self.event_generate("<<Cut>>"))
-        menu.add_command(label="Копировать",
-                         command=lambda: self.event_generate("<<Copy>>"))
-        menu.add_command(label="Вставить",
-                         command=lambda: self.event_generate("<<Paste>>"))
+        def modify():
+            if isinstance(self, tk.Text):
+                self.event_generate("<<TextModified>>")
+
+        menu.add_command(
+            label="Вырезать",
+            command=lambda _=None: (_on_cut_handler(self), modify())
+        )
+        menu.add_command(label="Копировать", command=lambda: _on_copy_handler(self))
+        menu.add_command(
+            label="Вставить",
+            command=lambda _=None: (_on_paste_handler(self), modify())
+        )
 
         menu.add_separator()
         menu.add_command(
             label="Вставить ФИО",
-            command=lambda _=None: FioInserter(self).insert_lfm()
+            command=lambda _=None: (
+                FioInserter(self).insert_lfm(), modify())
         )
         menu.add_command(
             label="Вставить ИОФ",
-            command=lambda _=None: FioInserter(self).insert_ifl()
+            command=lambda _=None: (
+                FioInserter(self).insert_ifl(), modify())
         )
         menu.add_separator()
         menu.add_command(label="Выделить всё", command=select_all)

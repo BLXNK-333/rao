@@ -43,7 +43,7 @@ class DataTable(ttk.Frame):
 
         self._group_id = group_id.value
         self.dt: Optional[ttk.Treeview] = None
-        self._context_menu: Optional[tk.Menu] = None
+        self.context_menu: Optional[tk.Menu] = None
         self._headers = headers
         self._stretchable_column_indices: Set[int] = set(stretchable_column_indices)
         self._show_table_end: bool = show_table_end
@@ -110,11 +110,11 @@ class DataTable(ttk.Frame):
 
     def _create_context_menu(self):
         """Создаёт контекстное меню для таблицы."""
-        self._context_menu = tk.Menu(self, tearoff=0)
-        self._context_menu.configure(**CONTEXT_MENU_STYLES)
-        self._context_menu.add_command(label="Открыть", command=self._open_selected_row)
-        self._context_menu.add_command(label="Клонировать", command=self._clone_selected_row)
-        self._context_menu.add_command(label="Удалить", command=self._delete_selected_rows)
+        self.context_menu = tk.Menu(self, tearoff=0)
+        self.context_menu.configure(**CONTEXT_MENU_STYLES)
+        self.context_menu.add_command(label="Открыть", command=self._open_selected_row)
+        self.context_menu.add_command(label="Клонировать", command=self._clone_selected_row)
+        self.context_menu.add_command(label="Удалить", command=self._delete_selected_rows)
 
     def _estimate_column_lengths(self, headers: List[str], data: List[List[str]],
                                 sample_size: int = 20) -> Dict[str, int]:
@@ -227,7 +227,7 @@ class DataTable(ttk.Frame):
         if row_id not in self.dt.selection():
             self.dt.selection_set(row_id)
 
-        self._context_menu.tk_popup(event.x_root, event.y_root)
+        self.context_menu.tk_popup(event.x_root, event.y_root)
 
     def on_header_click(self, col_index: int, col_name: str):
         """Обработка клика по заголовку. Обертка, чтобы пустить через событийный цикл."""

@@ -343,6 +343,9 @@ class UndoText(tk.Text, ContextMenuMixin):
 
     def _apply_bindings(self):
         self.bind("<KeyRelease>", self._on_write)
+        # "<<TextModified>>" - Пользовательское событие для "внешних" обработчиков
+        self.bind("<<TextModified>>", self._on_write)
+
         if sys.platform == "win32":
             self.bind("<Control-KeyPress>", self._on_ctrl)
         else:

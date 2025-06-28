@@ -53,7 +53,7 @@ def bootstrap():
         data=backend.sync_db.get_all_rows(HEADER.SONGS),
         stretchable_column_indices=[1, 2, 4, 5, 6],
         enable_tooltips=False,
-        show_table_end=False,
+        show_table_end=True,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         prev_cols_state=songs_table_cols_state,
         sort_key_state=songs_table_sort_state
