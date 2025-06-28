@@ -3,6 +3,7 @@ from enum import Enum
 
 class ICON(str, Enum):
     ADD_CARD_24 = "add_card_24"
+    CLONE_CARD_24 = "clone_card_24"
     EDIT_CARD_24 = "edit_card_24"
     DELETE_CARD_24 = "delete_card_24"
     AUTO_SIZE_ON_24 = "auto_size_on_24"
@@ -119,6 +120,7 @@ class EventType:
         class TABLE:
             class PANEL:
                 ADD_CARD = "VIEW.TABLE.PANEL.ADD_CARD"
+                CLONE_CARD = "VIEW.TABLE.PANEL.CLONE_CARD"
                 EDIT_CARD = "VIEW.TABLE.PANEL.EDIT_CARD"
                 DELETE_CARD = "VIEW.TABLE.PANEL.DELETE_CARD"
                 SEARCH_VALUE = "VIEW.TABLE.PANEL.SEARCH_VALUE"
@@ -129,7 +131,8 @@ class EventType:
                 DELETE_CARDS = "VIEW.TABLE.DT.DELETE_CARDS"
                 SORT_CHANGED = "VIEW.TABLE.DT.SORT_CHANGED"
                 MANUAL_COL_SIZE = "VIEW.TABLE.DT.MANUAL_COL_SIZE"
-                AUTO_COL_SIZE = "VIEW.TABLE.DT.AUTO_COL_SIZE"
+                AUTO_COL_SIZE = "VIEW.TABLE.DT.AUTO_COL_SIZE",
+                CLONE_ITEM = "VIEW.TABLE.DT.CLONE_ITEM",
 
             class BUFFER:
                 FILTERED_TABLE = "VIEW.TABLE.FILTERED_TABLE"

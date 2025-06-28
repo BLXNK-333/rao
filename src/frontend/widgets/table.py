@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import List, Dict, Set, Tuple, Optional
+from typing import List, Dict, Set, Tuple, Optional, Union
 from datetime import datetime
 
 import tkinter as tk
@@ -83,7 +83,8 @@ class DataTable(ttk.Frame):
             (EventType.VIEW.TABLE.PANEL.DELETE_CARD, self._delete_selected_rows),
             (EventType.VIEW.TABLE.PANEL.EDIT_CARD, self._open_selected_row),
             (EventType.VIEW.TABLE.BUFFER.FILTERED_TABLE, self._filter_table),
-            (EventType.VIEW.TABLE.PANEL.AUTO_SIZE, self._auto_size_widths)
+            (EventType.VIEW.TABLE.PANEL.AUTO_SIZE, self._auto_size_widths),
+            (EventType.VIEW.TABLE.PANEL.CLONE_CARD, self._clone_selected_row)
         ]
         for event_type, handler in subscriptions:
             EventBus.subscribe(
@@ -411,6 +412,10 @@ class DataTable(ttk.Frame):
         """Удаляет выбранные строки."""
         selected_items = self.dt.selection()
         if not selected_items:
+            messagebox.showinfo(
+                "Уведомление",
+                "Не выбрано ни одной карточки для удаления."
+            )
             return
 
         if not tk.messagebox.askyesno(
@@ -432,6 +437,31 @@ class DataTable(ttk.Frame):
                 group_id=self._group_id
             ),
             deleted_ids, self._group_id
+        )
+
+    def _clone_selected_row(self):
+        """Клонирует одну выбранную строку."""
+        selected_items = self.dt.selection()
+
+        if not selected_items:
+            messagebox.showinfo(
+                "Уведомление",
+                "Не выбрано ни одной карточки для клонирования."
+            )
+            return
+
+        original_id = selected_items[0]
+        original_values = self.dt.item(original_id, "values")
+
+        cloned_data = dict(zip(self._headers, original_values))
+        cloned_data["ID"] = ""
+
+        EventBus.publish(
+            Event(
+                event_type=EventType.VIEW.TABLE.DT.CLONE_ITEM,
+                group_id=self._group_id
+            ),
+            self._group_id, cloned_data, True
         )
 
     def _filter_table(
@@ -518,6 +548,7 @@ class TablePanel(ttk.Frame):
 
         icons = [
             (ICON.ADD_CARD_24, self.add_card, "Добавить новую карточку"),
+            (ICON.CLONE_CARD_24, self.clone_card, "Клонировать карточку"),
             (ICON.EDIT_CARD_24, self.edit_card, "Редактировать карточку"),
             (ICON.DELETE_CARD_24, self.delete_card, "Удалить карточку")
         ]
@@ -548,6 +579,13 @@ class TablePanel(ttk.Frame):
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.PANEL.ADD_CARD),
             self._group_id, {}
+        )
+
+    def clone_card(self):
+        EventBus.publish(
+            event=Event(
+                event_type=EventType.VIEW.TABLE.PANEL.CLONE_CARD,
+                group_id=self._group_id)
         )
 
     def edit_card(self):

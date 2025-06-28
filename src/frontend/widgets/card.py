@@ -346,6 +346,7 @@ class CardManager:
         subscriptions = [
             (EventType.BACK.DB.CARD_DICT, self._on_card_dict),
             (EventType.VIEW.TABLE.PANEL.ADD_CARD, self._open_card),
+            (EventType.VIEW.TABLE.DT.CLONE_ITEM, self._open_card),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self._del_card_ids),
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
             (EventType.BACK.DB.CARD_ID, self._update_card_id),

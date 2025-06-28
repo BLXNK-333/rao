@@ -13,7 +13,7 @@ from .enums import EventType, DispatcherType, GROUP
 class Event:
     def __init__(
             self,
-        event_type: Union[str, EventType],
+            event_type: Union[str, EventType],
             group_id: Optional[GROUP] = None,
     ):
         self.event_type = event_type

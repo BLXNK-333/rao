@@ -13,6 +13,7 @@ class Icons:
 
     _file_map = {
         ICON.ADD_CARD_24: "plus-24.png",
+        ICON.CLONE_CARD_24: "copy-24.png",
         ICON.EDIT_CARD_24: "pencil-24.png",
         ICON.DELETE_CARD_24: "delete-24.png",
         ICON.AUTO_SIZE_ON_24: "double-arrow-on-24.png",
