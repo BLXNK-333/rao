@@ -12,6 +12,7 @@ from .frontend.bindings import apply_global_bindings
 from .logging_config import set_logging_config
 from .eventbus import EventBus, TkDispatcher, QueueDispatcher
 from .enums import DispatcherType, HEADER, GROUP, STATE, ConfigKey
+from .version import __version__
 
 
 def bootstrap():
@@ -78,7 +79,7 @@ def bootstrap():
     settings = Settings(
         parent=window.content,
         settings=settings_dict,
-        version="0.2.0",
+        version=__version__,
         github_url="https://github.com/BLXNK-333/rao"
     )
 
