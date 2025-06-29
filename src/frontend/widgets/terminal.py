@@ -1,6 +1,5 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
-from queue import Queue, Empty
 import tkinter as tk
 from tkinter import ttk
 
@@ -11,7 +10,7 @@ from ...enums import TERM, EventType, DispatcherType, ICON
 
 
 class Terminal(ttk.Frame):
-    def __init__(self, master: tk.Tk, state: TERM, msg_queue: Queue) -> None:
+    def __init__(self, master: tk.Tk, state: TERM) -> None:
         """
         Initialize the Terminal widget and its internal components.
 
@@ -21,12 +20,11 @@ class Terminal(ttk.Frame):
         # UI components
         self.term_panel = TermPanel(self)
         self.term_logger = TermLogger(self)
-        self._setup_options(state, msg_queue)
+        self._setup_options(state)
 
-    def _setup_options(self, state: TERM, msg_queue: Queue):
+    def _setup_options(self, state: TERM):
         self.term_panel.set_active_state(state)
         self.term_logger.set_state(state)
-        self.term_logger.set_msq_queue(msg_queue)
         self.term_panel.create_widget()
         self.term_logger.create_widget()
 
@@ -172,7 +170,6 @@ class TermLogger(ttk.Frame):
         self.pack(expand=True, fill="both")
 
         self.active_state: TERM = TERM.MEDIUM
-        self.msq_queue: Optional[Queue[Tuple[str, str]]] = None
         self.text: Optional[tk.Text] = None
 
         self.subscribe()
@@ -186,6 +183,7 @@ class TermLogger(ttk.Frame):
              lambda: self._set_height(self.HEIGHTS[TERM.MEDIUM])),
             (EventType.VIEW.TERM.LARGE,
              lambda: self._set_height(self.HEIGHTS[TERM.LARGE])),
+            (EventType.BACK.LOGGER.EMITTED, self._write)
         ]
 
         for event_type, callback in subscriptions:
@@ -212,9 +210,6 @@ class TermLogger(ttk.Frame):
         self.text.configure(state="disabled")
         self._configure_log_tags()
 
-        # Start periodic log updates
-        self.after(50, lambda _=None: self._update_log())
-
     def _clear_text(self):
         self.text.config(state="normal")  # Разрешаем редактирование
         self.text.delete("1.0", tk.END)  # Удаляем всё содержимое
@@ -236,28 +231,6 @@ class TermLogger(ttk.Frame):
 
     def set_state(self, state: TERM):
         self.active_state = state
-
-    def set_msq_queue(self, msq_queue: Queue) -> None:
-        """
-        Sets the message queue for logging.
-
-        :param msq_queue: The queue that receives log messages.
-        """
-        if self.msq_queue:
-            return
-        self.msq_queue = msq_queue
-
-    def _update_log(self) -> None:
-        """Periodically update the Text widget by extracting logs from the queue."""
-        try:
-            while not self.msq_queue.empty():
-                msg, log_level = self.msq_queue.get_nowait()
-                self._write(msg, log_level)
-        except Empty:
-            pass
-
-        # Schedule the next log update
-        self.after(50, lambda _=None: self._update_log())
 
     def _write(self, msg: str, log_level: str) -> None:
         """

@@ -106,6 +106,9 @@ class EventType:
         class EXPORT:
             MESSAGE = "BACK.EXPORT.MESSAGE"
 
+        class LOGGER:
+            EMITTED = "BACK.LOGGER.EMITTED"
+
 
     class VIEW:
         # View signals

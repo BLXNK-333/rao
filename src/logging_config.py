@@ -1,16 +1,19 @@
 import logging
-from queue import Queue
+
+from .eventbus import EventBus, Event
+from .enums import EventType
 
 
 class ClassNameFilter(logging.Filter):
     """
-    A logging filter that extracts the final part of the module name
-    (excluding the package path) and adds it as the `class_name` attribute.
+    Logging filter that adds the final segment of the logger's name
+    (typically the module name) to the log record as `class_name`.
+    Useful for displaying concise origin information in logs.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        Modify the log record by adding the `class_name` attribute.
+        Add `class_name` attribute to the log record.
 
         :param record: The log record being processed.
         :return: Always returns True to allow the record to be logged.
@@ -21,38 +24,37 @@ class ClassNameFilter(logging.Filter):
 
 class TkinterTextHandler(logging.Handler):
     """
-    A custom logging handler that redirects log messages to a queue.
-    This allows safe inter-thread communication between logging
-    and the Tkinter main thread.
+    Custom logging handler that emits log messages via the event bus.
+    Designed for integration with Tkinter UIs by sending logs as events,
+    allowing safe inter-thread delivery without explicit queues.
     """
 
-    def __init__(self, queue: Queue) -> None:
+    def __init__(self) -> None:
         """
-        Initialize the log handler.
-
-        :param queue: A thread-safe queue for storing log messages.
+        Initialize the event-driven log handler.
         """
         super().__init__()
-        self.queue = queue
 
     def emit(self, record: logging.LogRecord) -> None:
         """
-        Process and output a log message to the queue.
+        Emit a formatted log message as an event.
 
-        :param record: The log record to be displayed.
+        :param record: The log record to be emitted.
         """
         msg = self.format(record)
-        self.queue.put((msg, record.levelname.lower()))
+        EventBus.publish(
+            Event(event_type=EventType.BACK.LOGGER.EMITTED),
+            msg, record.levelname.lower()
+        )
 
 
-def set_logging_config(queue: Queue) -> None:
+def set_logging_config() -> None:
     """
-    Configure logging to output to a Tkinter-compatible queue.
-
-    :param queue: A thread-safe queue for collecting log messages.
-    :return: The configured log handler.
+    Set up logging to send formatted messages through the event bus.
+    Attaches a custom handler that emits log records as events and
+    applies a class name filter for concise source identification.
     """
-    log_handler = TkinterTextHandler(queue)
+    log_handler = TkinterTextHandler()
 
     formatter = logging.Formatter(
         "%(asctime)s - %(class_name)s - %(message)s",

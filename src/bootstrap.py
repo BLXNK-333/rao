@@ -18,8 +18,8 @@ def bootstrap():
     # -------------------------------
     # Backend initialization
     # -------------------------------
+    set_logging_config()
     backend = BackendService()
-    set_logging_config(queue=backend.msg_queue)
 
     songs_table_cols_state = backend.sync_db.get_state(STATE.SONGS_COL_SIZE)
     report_table_cols_state = backend.sync_db.get_state(STATE.REPORT_COL_SIZE)
@@ -91,8 +91,7 @@ def bootstrap():
 
     terminal = Terminal(
         master=window,
-        state=window.terminal_state,
-        msg_queue=backend.msg_queue
+        state=window.terminal_state
     )
 
     menu = TopMenu(

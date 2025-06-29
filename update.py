@@ -113,7 +113,7 @@ def main():
                 "requirements.txt not found. Skipping dependency installation.")
 
     print("\n✅ Update completed.")
-    input("Press Enter to exit...")
+    # input("Press Enter to exit...")
 
 
 if __name__ == "__main__":
