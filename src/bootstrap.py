@@ -52,7 +52,7 @@ def bootstrap():
         header_map=FIELD_MAPS.get(HEADER.SONGS),
         data=backend.sync_db.get_all_rows(HEADER.SONGS),
         stretchable_column_indices=[1, 2, 4, 5, 6],
-        enable_tooltips=False,
+        enable_tooltips=settings_dict.get(ConfigKey.SONG_TOOLTIPS),
         show_table_end=True,
         default_report_values=DEFAULT_CARD_VALUES[HEADER.REPORT],
         prev_cols_state=songs_table_cols_state,
@@ -65,7 +65,7 @@ def bootstrap():
         header_map=FIELD_MAPS.get(HEADER.REPORT),
         data=backend.sync_db.get_all_rows(HEADER.REPORT),
         stretchable_column_indices=[3, 4, 7, 8, 12],
-        enable_tooltips=True,
+        enable_tooltips=settings_dict.get(ConfigKey.REPORT_TOOLTIPS),
         show_table_end=True,
         prev_cols_state=report_table_cols_state,
         sort_key_state=report_table_sort_state

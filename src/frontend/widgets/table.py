@@ -978,9 +978,25 @@ class Table(ttk.Frame):
         self.data_table.user_defined_widths = prev_cols_state
 
         if enable_tooltips:
-            self.register_tooltips()
+            self.toggle_tooltip_state()
 
-    def register_tooltips(self):
+        self.subscribe()
+
+    def subscribe(self):
+        subscriptions = [
+            (EventType.VIEW.SETTINGS.HEADER_TOOLTIPS_STATE, self.toggle_tooltip_state),
+        ]
+        for event_type, handler in subscriptions:
+            EventBus.subscribe(
+                event_type=event_type,
+                subscriber=Subscriber(
+                    callback=handler,
+                    route_by=DispatcherType.TK,
+                    group_id=self.group_id
+                )
+            )
+
+    def toggle_tooltip_state(self, state: bool = True):
         # for btn in self.table_panel.buttons.values():
         #     EventBus.publish(
         #         Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
@@ -988,8 +1004,8 @@ class Table(ttk.Frame):
         #     )
 
         EventBus.publish(
-            Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
-            self.data_table.dt, self.data_table._heading_tooltip_texts
+            Event(event_type=EventType.VIEW.TABLE.HEADER_TOOLTIPS_STATE),
+            state, self.data_table.dt, self.data_table._heading_tooltip_texts
         )
 
     def _setup_layout(self):

@@ -6,17 +6,18 @@ from tkinter import ttk, StringVar, BooleanVar
 
 from ..widgets import ScrolledFrame
 from ..icons import Icons
-from ...enums import ConfigKey, EventType, TERM, ICON
+from ...enums import ConfigKey, EventType, TERM, ICON, GROUP
 from ...eventbus import EventBus, Event
 
 
 class BaseFrame(ttk.Frame, ABC):
     def __init__(self, parent, key: ConfigKey, attr_name: str,
-                 event_type: Optional[EventType] = None):
+                 event_type: Optional[EventType] = None, group_id: Optional[GROUP] = None):
         super().__init__(parent)
         self.key = key
         self.var = None
         self.event_type = event_type
+        self.group_id = group_id
 
         # Используем grid для внутренней раскладки
         self.columnconfigure(0, minsize=300)  # примерно ширина для лейбла (примерно 40 символов)
@@ -37,7 +38,7 @@ class BaseFrame(ttk.Frame, ABC):
         ), {self.key: value}
         )
         if self.event_type:
-            EventBus.publish(Event(self.event_type), value)
+            EventBus.publish(Event(self.event_type, self.group_id), value)
 
 
     @abstractmethod
@@ -52,8 +53,8 @@ class BaseFrame(ttk.Frame, ABC):
 
 class CheckboxFrame(BaseFrame):
     def __init__(self, parent, *, key: ConfigKey, value: bool, attr_name: str,
-                 event_type: Optional[EventType] = None):
-        super().__init__(parent, key, attr_name, event_type)
+                 event_type: Optional[EventType] = None, group_id: Optional[GROUP] = None):
+        super().__init__(parent, key, attr_name, event_type, group_id)
         self.var = BooleanVar(value=bool(value))
         self._bind_trace()
         cb = ttk.Checkbutton(self, variable=self.var)
@@ -65,8 +66,9 @@ class CheckboxFrame(BaseFrame):
 
 class ComboboxFrame(BaseFrame):
     def __init__(self, parent, *, key: ConfigKey, value: Any, attr_name: str,
-                 options: Dict[str, Any], event_type: Optional[EventType] = None):
-        super().__init__(parent, key, attr_name, event_type)
+                 options: Dict[str, Any], event_type: Optional[EventType] = None,
+                 group_id: Optional[GROUP] = None):
+        super().__init__(parent, key, attr_name, event_type, group_id)
         self.keys_map = options
 
         # найти ключ, соответствующий значению
@@ -88,8 +90,8 @@ class ComboboxFrame(BaseFrame):
 
 class ScaleFrame(BaseFrame):
     def __init__(self, parent, *, key: ConfigKey, value: int, attr_name: str,
-                 event_type: Optional[EventType] = None):
-        super().__init__(parent, key, attr_name, event_type)
+                 event_type: Optional[EventType] = None, group_id: Optional[GROUP] = None):
+        super().__init__(parent, key, attr_name, event_type, group_id)
         self.var = tk.IntVar(value=max(0, min(100, int(value))))
         self._bind_trace()
 
@@ -151,7 +153,8 @@ class SettingsWidgets(ttk.Frame):
                 "widget_args": {
                     "key": ConfigKey.SHOW_TERMINAL,
                     "attr_name": "Показывать терминал при старте программы:",
-                    "event_type": None
+                    "event_type": None,
+                    "group_id": None
                 },
             },
             {
@@ -160,6 +163,7 @@ class SettingsWidgets(ttk.Frame):
                     "key": ConfigKey.TERMINAL_SIZE,
                     "attr_name": "Размер терминала по умолчанию:",
                     "event_type": None,
+                    "group_id": None,
                     "options": {
                         "Маленький внизу": TERM.SMALL.value,
                         "Средний на 16 строк": TERM.MEDIUM.value,
@@ -174,7 +178,8 @@ class SettingsWidgets(ttk.Frame):
                 "widget_args": {
                     "key": ConfigKey.CARD_PIN,
                     "attr_name": "Закреплять карточки при открытии:",
-                    "event_type": EventType.VIEW.SETTINGS.CARD_PIN
+                    "event_type": EventType.VIEW.SETTINGS.CARD_PIN,
+                    "group_id": None
                 },
             },
             {
@@ -183,9 +188,30 @@ class SettingsWidgets(ttk.Frame):
                     "key": ConfigKey.CARD_TRANSPARENCY,
                     "attr_name": "Прозрачность окна:",
                     "event_type": EventType.VIEW.SETTINGS.CARD_TRANSPARENCY,
+                    "group_id": None
                 },
             },
         ],
+        "Таблица": [
+            {
+                "widget_type": CheckboxFrame,
+                "widget_args": {
+                    "key": ConfigKey.SONG_TOOLTIPS,
+                    "attr_name": "Показывать тултипы в таблице 'Песни':",
+                    "event_type": EventType.VIEW.SETTINGS.HEADER_TOOLTIPS_STATE,
+                    "group_id": GROUP.SONGS_TABLE
+                },
+            },
+            {
+                "widget_type": CheckboxFrame,
+                "widget_args": {
+                    "key": ConfigKey.REPORT_TOOLTIPS,
+                    "attr_name": "Показывать тултипы в таблице 'Отчет':",
+                    "event_type": EventType.VIEW.SETTINGS.HEADER_TOOLTIPS_STATE,
+                    "group_id": GROUP.REPORT_TABLE
+                },
+            }
+        ]
     }
 
     def __init__(

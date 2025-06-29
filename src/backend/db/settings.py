@@ -6,5 +6,7 @@ DEFAULT_SETTINGS: Dict[ConfigKey, Any] = {
     ConfigKey.SHOW_TERMINAL: False,
     ConfigKey.TERMINAL_SIZE: TERM.MEDIUM,
     ConfigKey.CARD_TRANSPARENCY: 85,
-    ConfigKey.CARD_PIN: False
+    ConfigKey.CARD_PIN: False,
+    ConfigKey.SONG_TOOLTIPS: False,
+    ConfigKey.REPORT_TOOLTIPS: True
 }

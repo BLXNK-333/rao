@@ -20,11 +20,14 @@ class TooltipManager:
         # Один словарь на всё: widget -> tooltip_data (str или dict)
         self._widget_tooltips: Dict[tk.Widget, Union[str, Dict[str, str]]] = {}
 
+        # widget -> {event_name: bind_id}
+        self._widget_binds: Dict[tk.Widget, Dict[str, str]] = {}
+
         self.subscribe()
 
     def subscribe(self):
         subscriptions = [
-            (EventType.VIEW.UI.REGISTER_TOOLTIP, self.register),
+            (EventType.VIEW.TABLE.HEADER_TOOLTIPS_STATE, self.state_handler),
         ]
         for event_type, handler in subscriptions:
             EventBus.subscribe(
@@ -35,6 +38,14 @@ class TooltipManager:
                 )
             )
 
+    def state_handler(
+            self,
+            state: bool,
+            widget: tk.Widget,
+            data: Union[str, Dict[str, str]]
+    ):
+        self.register(widget, data) if state else self.unregister(widget)
+
     def register(self, widget: tk.Widget, data: Union[str, Dict[str, str]]):
         """Регистрирует tooltip для любого поддерживаемого виджета"""
         if isinstance(widget, (tk.Button, ttk.Button)):
@@ -42,18 +53,39 @@ class TooltipManager:
         elif isinstance(widget, ttk.Treeview):
             self.add_treeview_heading_tooltips(widget, data)
 
+    def unregister(self, widget: tk.Widget):
+        """Удаляет tooltip и связанные бинды для указанного виджета"""
+        self._widget_tooltips.pop(widget, None)
+        self._hide_tooltip()
+
+        # Удаляем только наши бинды
+        binds = self._widget_binds.pop(widget, {})
+        for event, bind_id in binds.items():
+            try:
+                widget.unbind(event, bind_id)
+            except Exception:
+                pass  # безопасно проигнорировать, если уже удалено
+
     def add_widget_tooltip(self, widget: tk.Widget, text: str):
         """Добавляет простой tooltip для кнопок и других виджетов"""
         self._widget_tooltips[widget] = text
-        widget.bind("<Enter>", self._on_widget_enter)
-        widget.bind("<Leave>", self._on_widget_leave)
+        enter_id = widget.bind("<Enter>", self._on_widget_enter, add="+")
+        leave_id = widget.bind("<Leave>", self._on_widget_leave, add="+")
+        self._widget_binds[widget] = {
+            "<Enter>": enter_id,
+            "<Leave>": leave_id,
+        }
 
     def add_treeview_heading_tooltips(self, treeview: ttk.Treeview,
                                       heading_texts: Dict[str, str]):
         """Добавляет tooltip к заголовкам Treeview"""
         self._widget_tooltips[treeview] = heading_texts
-        treeview.bind("<Motion>", self._on_treeview_motion)
-        treeview.bind("<Leave>", self._on_treeview_leave)
+        motion_id = treeview.bind("<Motion>", self._on_treeview_motion, add="+")
+        leave_id = treeview.bind("<Leave>", self._on_treeview_leave, add="+")
+        self._widget_binds[treeview] = {
+            "<Motion>": motion_id,
+            "<Leave>": leave_id,
+        }
 
     def _on_widget_enter(self, event):
         widget = event.widget
