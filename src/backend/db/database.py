@@ -5,7 +5,6 @@ import datetime
 from pathlib import Path
 import traceback
 
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
 from .models import Base, State, Songs, Report, Settings
@@ -26,7 +25,7 @@ class Database:
         self._logger = logging.getLogger(__name__)
         self.db_path: Path = DB_PATH
         self.engine = Engine
-        self.session: Session = SessionFactory()
+        self.session_factory = SessionFactory
         self._initialization()
 
     def _initialization(self):
@@ -35,7 +34,6 @@ class Database:
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка базы данных во время инициализации: {e}")
             self._logger.debug(traceback.format_exc())
-            self.close()
 
     def get_all_rows(self, table_name: str) -> List[Dict[str, Any]]:
         """
@@ -48,15 +46,16 @@ class Database:
             return []
 
         try:
-            records = self.session.query(model).all()
-            rows = []
-            for record in records:
-                row_dict = {}
-                for col in model.__table__.columns:
-                    value = getattr(record, col.name)
-                    row_dict[col.name] = value
-                rows.append(row_dict)
-            return rows
+            with self.session_factory() as session:
+                records = session.query(model).all()
+                rows = []
+                for record in records:
+                    row_dict = {}
+                    for col in model.__table__.columns:
+                        value = getattr(record, col.name)
+                        row_dict[col.name] = value
+                    rows.append(row_dict)
+                return rows
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка базы данных в get_all_rows('{table_name}'): {e}")
             self._logger.debug(traceback.format_exc())
@@ -71,20 +70,21 @@ class Database:
             else:
                 end_date = datetime.date(year, month + 1, 1)
 
-            query = (
-                self.session.query(Report)
-                .filter(Report.date >= start_date, Report.date < end_date)
-                .all()
-            )
+            with self.session_factory() as session:
+                query = (
+                    session.query(Report)
+                    .filter(Report.date >= start_date, Report.date < end_date)
+                    .all()
+                )
 
-            rows = []
-            for record in query:
-                row_dict = {}
-                for col in Report.__table__.columns:
-                    value = getattr(record, col.name)
-                    row_dict[col.name] = value
-                rows.append(row_dict)
-            return rows
+                rows = []
+                for record in query:
+                    row_dict = {}
+                    for col in Report.__table__.columns:
+                        value = getattr(record, col.name)
+                        row_dict[col.name] = value
+                    rows.append(row_dict)
+                return rows
 
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка в get_month_report({month=}, {year=}): {e}")
@@ -106,20 +106,21 @@ class Database:
             else:
                 end_date = datetime.date(year, month_start + 3, 1)
 
-            query = (
-                self.session.query(Report)
-                .filter(Report.date >= start_date, Report.date < end_date)
-                .all()
-            )
+            with self.session_factory() as session:
+                query = (
+                    session.query(Report)
+                    .filter(Report.date >= start_date, Report.date < end_date)
+                    .all()
+                )
 
-            rows = []
-            for record in query:
-                row_dict = {}
-                for col in Report.__table__.columns:
-                    value = getattr(record, col.name)
-                    row_dict[col.name] = value
-                rows.append(row_dict)
-            return rows
+                rows = []
+                for record in query:
+                    row_dict = {}
+                    for col in Report.__table__.columns:
+                        value = getattr(record, col.name)
+                        row_dict[col.name] = value
+                    rows.append(row_dict)
+                return rows
 
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка в get_quarter_report({quarter=}, {year=}): {e}")
@@ -141,13 +142,15 @@ class Database:
             return None
 
         try:
-            record = self.session.get(model, int(card_id))
-            if not record:
-                self._logger.warning(
-                    f"Запись с ID {card_id} не найдена в {table_name}")
-                return None
+            with self.session_factory() as session:
+                record = session.get(model, int(card_id))
+                if not record:
+                    self._logger.warning(
+                        f"Запись с ID {card_id} не найдена в {table_name}")
+                    return None
 
-            return {col.name: getattr(record, col.name) for col in model.__table__.columns}
+                return {col.name: getattr(record, col.name) for col in
+                        model.__table__.columns}
 
         except SQLAlchemyError as e:
             self._logger.error(
@@ -173,20 +176,20 @@ class Database:
             payload.pop("ID", None)
             payload.pop("id", None)
 
-            new_instance = model_cls(**payload)
-            self.session.add(new_instance)
-            self.session.commit()
+            with self.session_factory() as session:
+                new_instance = model_cls(**payload)
+                session.add(new_instance)
+                session.commit()
 
-            card_id = str(new_instance.id)
-            # если нужно — можно отправить card_id через EventBus, как в flashcard-логике
-            self._logger.debug(f"Карточка (ID: {card_id}) "
-                               f"добавлена в таблицу '{table_name}'")
-            return card_id
+                card_id = str(new_instance.id)
+                # если нужно — можно отправить card_id через EventBus, как в flashcard-логике
+                self._logger.debug(f"Карточка (ID: {card_id}) "
+                                   f"добавлена в таблицу '{table_name}'")
+                return card_id
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при добавлении записи в таблицу '{table_name}': {e}")
             self._logger.debug(traceback.format_exc())
-            self.session.rollback()
             return None
 
     def update_card(self, card_id: str, table_name: str, payload: dict) -> None:
@@ -204,22 +207,23 @@ class Database:
             return
 
         try:
-            record = self.session.get(model_cls, int(card_id))
-            if not record:
-                self._logger.warning(f"{model_cls.__name__} с ID {card_id} не найдена.")
-                return
+            with self.session_factory() as session:
+                record = session.get(model_cls, int(card_id))
+                if not record:
+                    self._logger.warning(f"{model_cls.__name__} с ID {card_id} не найдена.")
+                    return
 
-            for key, value in payload.items():
-                if hasattr(record, key):
-                    setattr(record, key, value)
+                for key, value in payload.items():
+                    if hasattr(record, key):
+                        setattr(record, key, value)
 
-            self.session.commit()
-            self._logger.debug(f"Карточка с (ID: {card_id}) обновлена в таблице '{table_name}'")
+                session.commit()
+                self._logger.debug(f"Карточка с (ID: {card_id}) обновлена в таблице '{table_name}'")
 
-        except Exception as e:
-            self._logger.error(f"Ошибка при обновлении записи ID={card_id} в таблице '{table_name}': {e}")
+        except SQLAlchemyError as e:
+            self._logger.error(f"Ошибка при обновлении записи ID={card_id} в таблице "
+                               f"'{table_name}': {e}")
             self._logger.debug(traceback.format_exc())
-            self.session.rollback()
 
     def delete_card(self, deleted_ids: List[str], table_name: str) -> None:
         """
@@ -234,19 +238,19 @@ class Database:
             return
 
         try:
-            count = (
-                self.session.query(model_cls)
-                .filter(model_cls.id.in_(map(int, deleted_ids)))
-                .delete(synchronize_session=False)
-            )
-            self.session.commit()
-            self._logger.debug(
-                f"Удалено {count} карточек из таблицы '{table_name}' с IDs: {deleted_ids}")
+            with self.session_factory() as session:
+                count = (
+                    session.query(model_cls)
+                    .filter(model_cls.id.in_(map(int, deleted_ids)))
+                    .delete(synchronize_session=False)
+                )
+                session.commit()
+                self._logger.debug(
+                    f"Удалено {count} карточек из таблицы '{table_name}' с IDs: {deleted_ids}")
 
-        except Exception as e:
+        except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при удалении карточек из таблицы '{table_name}': {e}")
             self._logger.debug(traceback.format_exc())
-            self.session.rollback()
 
     def get_state(self, key: str) -> Optional[Any]:
         """
@@ -256,8 +260,10 @@ class Database:
         :return: значение (dict / list / str / bool / int / float), если найдено; иначе None
         """
         try:
-            record = self.session.get(State, key)
-            return record.value if record else None
+            with self.session_factory() as session:
+                record = session.get(State, key)
+                return record.value if record else None
+
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при получении состояния по ключу '{key}': {e}")
             self._logger.debug(traceback.format_exc())
@@ -271,28 +277,30 @@ class Database:
         :param value: значение (должно быть сериализуемо в JSON)
         """
         try:
-            existing = self.session.get(State, key)
-            if existing:
-                existing.value = value
-            else:
-                self.session.add(State(key=key, value=value))
-            self.session.commit()
+            with self.session_factory() as session:
+                existing = session.get(State, key)
+                if existing:
+                    existing.value = value
+                else:
+                    session.add(State(key=key, value=value))
+                session.commit()
             # self._logger.debug(f"Обновлено состояние: '{key}', с значениями {value}")
+
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при установке состояния '{key}': {e}")
             self._logger.debug(traceback.format_exc())
-            self.session.rollback()
 
     def get_settings(self) -> Dict[str, Any]:
         """
         Возвращает все настройки из таблицы `settings` как словарь.
         """
         try:
-            rows = self.session.query(Settings).all()
-            return {
-                row.key: json.loads(row.value)
-                for row in rows
-            }
+            with self.session_factory() as session:
+                rows = session.query(Settings).all()
+                return {
+                    row.key: json.loads(row.value)
+                    for row in rows
+                }
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при чтении настроек: {e}")
             self._logger.debug(traceback.format_exc())
@@ -305,21 +313,16 @@ class Database:
         :param settings: словарь ключей и значений
         """
         try:
-            for key, value in settings.items():
-                value_json = json.dumps(value)
-                existing = self.session.get(Settings, key)
-                if existing:
-                    existing.value = value_json
-                else:
-                    self.session.add(Settings(key=key, value=value_json))
-            self.session.commit()
+            with self.session_factory() as session:
+                for key, value in settings.items():
+                    value_json = json.dumps(value)
+                    existing = session.get(Settings, key)
+                    if existing:
+                        existing.value = value_json
+                    else:
+                        session.add(Settings(key=key, value=value_json))
+                session.commit()
+
         except SQLAlchemyError as e:
             self._logger.error(f"Ошибка при записи настроек: {e}")
             self._logger.debug(traceback.format_exc())
-            self.session.rollback()
-
-    def close(self):
-        """
-        Закрывает соединение.
-        """
-        self.session.close()

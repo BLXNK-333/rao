@@ -25,7 +25,6 @@ class SyncDB:
 
     def subscribe(self):
         handlers = [
-            (EventType.VIEW.UI.CLOSE_WINDOW, self.close_connection),
             (EventType.VIEW.TABLE.DT.EDIT_CARD, self.get_card),
             (EventType.VIEW.CARD.SAVE, self.save_card),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self.delete_card),
@@ -99,7 +98,8 @@ class SyncDB:
             group_id=GROUP(table_name)
         ), list(to_view.values()))
 
-        # # Генерируем событие для Card Manager
+        # Генерируем событие для Card Manager, включить если карточка не будет
+        # закрываться после сохранения.
         # EventBus.publish(
         #     Event(event_type=EventType.BACK.DB.CARD_DICT),
         #     card_key, table_name, to_view
@@ -150,9 +150,6 @@ class SyncDB:
     def set_settings(self, settings: Dict[ConfigKey, Any]):
         converted_settings = {k.value: v for k, v in settings.items()}
         self.db.set_settings(settings=converted_settings)
-
-    def close_connection(self):
-        self.db.close()
 
     @staticmethod
     def _extract_table_name(state_name: STATE) -> HEADER:
