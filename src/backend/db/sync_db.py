@@ -91,7 +91,6 @@ class SyncDB:
         else:
             card_id = self.db.add_card(table_name=table_name, payload=remapped_data)
             remapped_data["id"] = card_id
-            EventBus.publish(Event(EventType.BACK.DB.CARD_ID), card_key, card_id)
 
         to_view = adapter.to_view(remapped_data)
         # Генерируем событие для таблицы
@@ -100,11 +99,11 @@ class SyncDB:
             group_id=GROUP(table_name)
         ), list(to_view.values()))
 
-        # Генерируем событие для Card Manager
-        EventBus.publish(
-            Event(event_type=EventType.BACK.DB.CARD_DICT),
-            card_key, table_name, to_view
-        )
+        # # Генерируем событие для Card Manager
+        # EventBus.publish(
+        #     Event(event_type=EventType.BACK.DB.CARD_DICT),
+        #     card_key, table_name, to_view
+        # )
 
     def delete_card(self, deleted_ids: List[str], table_name: Union[str, GROUP]):
         if isinstance(table_name, GROUP):

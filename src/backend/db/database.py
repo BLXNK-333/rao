@@ -179,7 +179,7 @@ class Database:
 
             card_id = str(new_instance.id)
             # если нужно — можно отправить card_id через EventBus, как в flashcard-логике
-            self._logger.debug(f"{model_cls.__name__} (ID: {card_id}) "
+            self._logger.debug(f"Карточка (ID: {card_id}) "
                                f"добавлена в таблицу '{table_name}'")
             return card_id
 
@@ -214,7 +214,7 @@ class Database:
                     setattr(record, key, value)
 
             self.session.commit()
-            self._logger.debug(f"{model_cls.__name__} (ID: {card_id}) обновлена в таблице '{table_name}'")
+            self._logger.debug(f"Карточка с (ID: {card_id}) обновлена в таблице '{table_name}'")
 
         except Exception as e:
             self._logger.error(f"Ошибка при обновлении записи ID={card_id} в таблице '{table_name}': {e}")
@@ -241,7 +241,7 @@ class Database:
             )
             self.session.commit()
             self._logger.debug(
-                f"Удалено {count} карточек из таблицы '{table_name}' с ID: {deleted_ids}")
+                f"Удалено {count} карточек из таблицы '{table_name}' с IDs: {deleted_ids}")
 
         except Exception as e:
             self._logger.error(f"Ошибка при удалении карточек из таблицы '{table_name}': {e}")

@@ -100,7 +100,6 @@ class EventType:
             # DEFAULT_SETTINGS = "BACK.DB.DEFAULT_SETTINGS"
             TABLE = "BACK.DB.TABLE"
             CARD_VALUES = "BACK.DB.CARD_VALUES"
-            CARD_ID = "BACK.DB.CARD_ID"
             CARD_DICT = "BACK.DB.CARD_DICT"
             REPORT = "BACK.DB.REPORT"
             VALIDATION = "BACK.DB.VALIDATION"

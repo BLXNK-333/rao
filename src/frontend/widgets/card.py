@@ -90,18 +90,6 @@ class CardFields(ttk.Frame):
         current = self.get_data()
         return any(self.data.get(k, "") != v for k, v in current.items())
 
-    def update_id(self, card_id: str):
-        """Обновляет значение ID в заблокированном поле."""
-        entry = self.entries["ID"]
-        self.data["ID"] = card_id
-
-        # Временно включаем для редактирования
-        entry.config(state="normal")
-        entry.delete("1.0", "end")
-        entry.insert("1.0", card_id)
-        entry.config(state="disabled")
-        entry.edit_modified(False)
-
     def highlight_bad_fields(self, fields_map: Dict[str, bool]):
         """Подсвечивает поля с ошибками розовым, остальные — белым."""
         for field, widget in self.entries.items():
@@ -282,9 +270,6 @@ class CardEditor(tk.Toplevel, BaseWindow):
     def get_id(self):
         return self.fields.data.get("ID", "")
 
-    def set_id(self, card_id: str):
-        self.fields.update_id(card_id)
-
     def on_save(self):
         for widget in self.fields.entries.values():
             widget.event_generate("<<Modified>>")
@@ -349,7 +334,6 @@ class CardManager:
             (EventType.VIEW.TABLE.DT.CLONE_ITEM, self._open_card),
             (EventType.VIEW.TABLE.DT.DELETE_CARDS, self._del_card_ids),
             (EventType.VIEW.CARD.DESTROY, self._destroy_card),
-            (EventType.BACK.DB.CARD_ID, self._update_card_id),
             (EventType.BACK.DB.VALIDATION, self._highlight_bad_fields),
             (EventType.VIEW.SETTINGS.CARD_TRANSPARENCY, self._set_card_transparent_value),
             (EventType.VIEW.SETTINGS.CARD_PIN, self._set_card_pin)
@@ -360,11 +344,6 @@ class CardManager:
                 event_type=event,
                 subscriber=Subscriber(callback=handler, route_by=DispatcherType.TK)
             )
-
-    def _update_card_id(self, card_key: str, card_id: str):
-        card = self.opened_cards.get(card_key)
-        if card:
-            card.set_id(card_id)
 
     def _set_card_transparent_value(self, value: int):
         self._card_transparent_value = round(value / 100, 2)
