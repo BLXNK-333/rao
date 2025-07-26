@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Any
 import datetime
 import calendar
 from pathlib import Path
@@ -18,6 +18,32 @@ def _get_russian_period_text(month: int, year: int) -> str:
     month_name = month_names[month]
 
     return f"с {from_day} {month_name} {year} по {to_day} {month_name} {year}"
+
+
+def _calculate_total_play_time(data: List[List[Any]]) -> str:
+    """
+    Calculates the total play time from a list of rows,
+    where the 6th column (index 5) contains datetime.time values.
+
+    :param data: List of rows, each containing a datetime.time object at index 5
+    :return: String in format 'X час. Y мин. Z сек.'
+    """
+
+    def time_to_timedelta(t: datetime.time) -> datetime.timedelta:
+        return datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+
+    total_duration = sum(
+        (time_to_timedelta(i[5]) for i in data),
+        start=datetime.timedelta()
+    )
+
+    total_seconds = int(total_duration.total_seconds())
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    result_string = f"{hours} час. {minutes} мин. {seconds} сек."
+    return result_string
 
 
 def generate_xlsx_month_report(
@@ -266,9 +292,13 @@ def generate_xlsx_quarter_report(
         'font_name': 'Arial', 'font_size': 10,
         'valign': 'top'
     })
-    worksheet.write(final_row + 2, 0,
-                    "Итого общий хронометраж Произведений за Отчетный период",
-                    fmt_footer_text)
+
+    total_play_time = _calculate_total_play_time(data)
+    worksheet.write(
+        final_row + 2, 0,
+        f"Итого общий хронометраж Произведений за Отчетный период: {total_play_time}",
+        fmt_footer_text
+    )
 
     # Пустая строка
     worksheet.set_row(final_row + 3, 14.25)
