@@ -39,7 +39,7 @@ class MonthReport(BaseReport):
             "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"
         ]
         name = month_names[self.month - 1]
-        return f"РАО {name} {self.year} г.{self.file_format}"
+        return f"РАО (ВОИС) {name} {self.year} г.{self.file_format}"
 
 
 class QuarterReport(BaseReport):
