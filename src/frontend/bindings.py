@@ -88,6 +88,7 @@ def _on_paste(event):
 def _on_paste_handler(widget: tk.Widget):
     try:
         text = widget.clipboard_get()
+        text = text.strip()
     except Exception:
         return "break"
 
