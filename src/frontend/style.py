@@ -113,10 +113,9 @@ class UIStyles(ThemedStyle):
         """Настраивает стили подсказок заголовков таблицы."""
         self.configure(
             "CustomTooltip.TLabel",
-            background="#e4ebee",
-            foreground="#222222",
-            font=("Arial", 10),
-            padding=(8, 4),
-            relief="flat",
-            borderwidth=1
+            background="#495056",  # тёмный фон
+            foreground="#fdfdfd",  # светлый текст
+            font=("Segoe UI", 10),  # современный UI-шрифт
+            padding=(10, 6),
+            relief="flat"
         )

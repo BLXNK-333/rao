@@ -997,11 +997,11 @@ class Table(ttk.Frame):
             )
 
     def toggle_tooltip_state(self, state: bool = True):
-        # for btn in self.table_panel.buttons.values():
-        #     EventBus.publish(
-        #         Event(event_type=EventType.VIEW.UI.REGISTER_TOOLTIP),
-        #         btn, btn.tooltip_text
-        #     )
+        for btn in self.table_panel.buttons.values():
+            EventBus.publish(
+                Event(event_type=EventType.VIEW.TABLE.HEADER_TOOLTIPS_STATE),
+                True, btn, btn.tooltip_text
+            )
 
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.HEADER_TOOLTIPS_STATE),

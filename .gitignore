@@ -3,7 +3,8 @@ __pycache__/
 .idea/
 .pytest_cache/
 _wip/
-pyrightconfig.json
 .flake8
+pyrightconfig.json
+pyvenv.cfg
 backdoor.py
 rao.db
