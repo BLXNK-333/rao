@@ -6,6 +6,7 @@ from tkinter import ttk
 from tkinter import messagebox
 
 from ..widgets import Table
+from ..style import CONTEXT_MENU_STYLES
 from ...eventbus import EventBus, Event
 from ...enums import GROUP, EventType
 
@@ -53,11 +54,22 @@ class TableWrapper(ttk.Frame):
 
         # Создаем дополнительные секции для контекстного меню.
         self.table.data_table.context_menu.add_separator()
+        copy_menu = tk.Menu(
+            self.table.data_table.context_menu,
+            tearoff=0,
+            **CONTEXT_MENU_STYLES
+        )
+
         for orig_key, mod_key in self.COLUMN_MAP.get(group_id, {}).items():
-            self.table.data_table.context_menu.add_command(
-                label=f"-- {mod_key[:15].lower()}",
+            copy_menu.add_command(
+                label=f" - {mod_key[:15].lower()}",
                 command=lambda k=orig_key: self._get_field_value(k)
             )
+
+        self.table.data_table.context_menu.add_cascade(
+            label="Копировать",
+            menu=copy_menu
+        )
 
     def _get_field_value(self, key: str):
         selected_items = self.table.data_table.dt.selection()

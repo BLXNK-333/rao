@@ -16,13 +16,15 @@ TEXT_STYLES = {
 }
 
 CONTEXT_MENU_STYLES = {
+    "font": ("Helvetica", 12),
+    "bg": "#4e5660",
+    "fg": "#f6f6f6",
+    "activebackground": "#509fcf",
+    "activeforeground": "#f6f6f6",
+    "relief": "flat",
     "activeborderwidth": 0,
-    "bd": 1,
-    "font": ("Helvetica", 11),
-    "activeforeground": "#ffffff",
-    "activebackground": "#54a7d9"
+    "disabledforeground": "#777777"
 }
-
 
 class UIStyles(ThemedStyle):
     def __init__(self, root):
