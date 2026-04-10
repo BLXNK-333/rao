@@ -1,4 +1,5 @@
 import logging
+import datetime
 from typing import List, Dict, Set, Tuple, Optional
 
 import tkinter as tk
@@ -758,6 +759,7 @@ class TableBuffer:
     def sort_data(self, _state_name, sort_data: Tuple[int, str, int]):
         """"""
         column_idx, column_name, direction = sort_data
+        column_name = self.header_map.get(column_name)
         self.sort_key = (column_idx, column_name, direction)
         term = self.filter_term
 
@@ -766,7 +768,7 @@ class TableBuffer:
             if direction:
                 keys.sort(
                     key=lambda k: self._sort_key(
-                        k, column_idx, self.header_map.get(column_name)),
+                        k, column_idx, column_name),
                     reverse=(direction < 0)
                 )
             self.sorted_keys = keys
@@ -870,6 +872,9 @@ class TableBuffer:
     def _sort_key(self, card_id: str, column_idx: int, column_name: str):
         val = self.original_data[card_id][column_idx]
 
+        if column_name == "date":
+            val += self.original_data[card_id][column_idx + 1].rjust(8, "0")
+
         if column_name in ("id", "play_count"):
             try:
                 primary_key = int(val)
@@ -893,15 +898,6 @@ class TableBuffer:
 
             except (ValueError, TypeError):
                 primary_key = float('inf')
-
-        # Тут убрал, у строки текущего формата ключ выходит корректным, нет смысла
-        # переводить в объекты, только замедляет.
-        #
-        # elif column_name == "date":
-        #     try:
-        #         primary_key = datetime.strptime(val.strip(), "%Y-%m-%d").date()
-        #     except (ValueError, TypeError):
-        #         primary_key = datetime.max.date()
 
         else:
             primary_key = str(val).lower()
