@@ -62,7 +62,7 @@ class TableWrapper(ttk.Frame):
 
         for orig_key, mod_key in self.COLUMN_MAP.get(group_id, {}).items():
             copy_menu.add_command(
-                label=f" - {mod_key[:15].lower()}",
+                label=f"- {mod_key[:15].lower()}",
                 command=lambda k=orig_key: self._get_field_value(k)
             )
 
