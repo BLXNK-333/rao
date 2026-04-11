@@ -17,13 +17,14 @@ TEXT_STYLES = {
 
 CONTEXT_MENU_STYLES = {
     "font": ("Helvetica", 12),
-    "bg": "#4e5660",
-    "fg": "#f6f6f6",
-    "activebackground": "#509fcf",
+    "bg": "#e9ecee",               # чистый светлый с холодным оттенком
+    "fg": "#1a1a1a",
+    "activebackground": "#54a7d9", # ТОТ ЖЕ акцент, что и в таблице
     "activeforeground": "#f6f6f6",
-    "relief": "flat",
+    "borderwidth": 1,
+    "relief": "solid",
     "activeborderwidth": 0,
-    "disabledforeground": "#777777"
+    "disabledforeground": "#8c9196"
 }
 
 class UIStyles(ThemedStyle):
