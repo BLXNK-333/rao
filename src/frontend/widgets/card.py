@@ -230,13 +230,13 @@ class CardEditor(tk.Toplevel, BaseWindow):
         """
         super().__init__(parent)
         self.withdraw()
-        self.title("Редактировать карточку")
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         self.card_key = card_key
         self.table = table
         self.is_new = not bool(data.get("ID"))
         self.unlock_save = unlock_save
         self._pinned = pinned or False
+        self.title(self.build_title(data))
 
         # Прозрачность
         self.is_transparent = False
@@ -266,6 +266,19 @@ class CardEditor(tk.Toplevel, BaseWindow):
             self.buttons.pin_btn.toggle()
 
         self.show_centered(geometry)
+
+    def build_title(self, data: Dict[str, str]) -> str:
+        """Генерирует название для окна карточки."""
+        _card_id = data.get("ID")
+        if not _card_id:
+            return "Новая карточка"
+        else:
+            hm = {"songs": "песня", "report": "отчет"}
+            return f"{hm.get(self.table)}: {_card_id}"
+
+    def update_title(self):
+        data = self.fields.get_data()
+        self.title(self.build_title(data))
 
     def get_id(self):
         return self.fields.data.get("ID", "")
@@ -378,6 +391,7 @@ class CardManager:
         if open_card:
             open_card.is_new = False
             open_card.fields.update_fields(card_dict)
+            open_card.update_title()
             open_card.buttons.set_save_button_enabled(False)
 
     def _open_card(self, table: str, card_dict: Dict[str, str],
@@ -424,6 +438,8 @@ class CardManager:
 
         if all(validation_result.values()):
             # Тут закроет карточку сразу после сохранения.
+            # Если нужно оставлять открытой, то закомментить _destroy_card, и включить
+            # в sync_db.py рассылку в методе save_card.
             self._destroy_card(card_key)
         else:
             open_card.fields.highlight_bad_fields(validation_result)
