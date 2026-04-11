@@ -76,8 +76,7 @@ class Window(tk.Tk, BaseWindow):
 
     def _set_icon(self):
         """
-        Sets the application window icon on Windows platforms.
-        This function has no effect on non-Windows platforms.
+        Sets the application window icon depending on the operating system.
         """
         if sys.platform == "win32":
             if getattr(sys, "frozen", False):
@@ -87,6 +86,13 @@ class Window(tk.Tk, BaseWindow):
                 icon_path = Path(__file__).resolve().parents[2] / "rao.ico"
 
             self.iconbitmap(icon_path)
+
+        else:
+            icon_path = Path(__file__).resolve().parents[2] / "rao.png"
+            if icon_path.exists():
+                img = tk.PhotoImage(file=icon_path)
+                self.iconphoto(True, img)
+                self._icon_ref = img
 
     def display_terminal(self):
         self.terminal.grid(row=2, column=0, sticky="nsew")
