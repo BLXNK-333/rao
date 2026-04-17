@@ -12,25 +12,6 @@ from ...enums import GROUP, EventType
 
 
 class TableWrapper(ttk.Frame):
-    COLUMN_MAP = {
-        GROUP.SONGS_TABLE: {
-            "Исполнитель": "Исполнитель",
-            "Название": "Название",
-            "Время": "Время",
-            "Композитор": "Композитор",
-            "Автор текста": "Автор текста",
-            "Лэйбл": "Лэйбл"
-        },
-        GROUP.REPORT_TABLE: {
-            "Исполнитель": "Исполнитель",
-            "Название": "Название",
-            "Общий хронометраж": "Время",
-            "Композитор": "Композитор",
-            "Автор текста": "Автор текста",
-            "Лэйбл": "Лэйбл"
-        }
-    }
-
     def __init__(
             self,
             parent,
@@ -60,10 +41,13 @@ class TableWrapper(ttk.Frame):
             **CONTEXT_MENU_STYLES
         )
 
-        for orig_key, mod_key in self.COLUMN_MAP.get(group_id, {}).items():
+        for header in self.table.data_table._headers:
+            if header.lower() == "id":
+                continue
+
             copy_menu.add_command(
-                label=f"- {mod_key[:15].lower()}",
-                command=lambda k=orig_key: self._get_field_value(k)
+                label=f"- {header.lower()}",
+                command=lambda k=header: self._get_field_value(k)
             )
 
         self.table.data_table.context_menu.add_cascade(
@@ -153,8 +137,8 @@ class SongsTable(TableWrapper):
         data["Композитор"] = song["Композитор"]
         data["Автор текста"] = song["Автор текста"]
         data["Лэйбл"] = song["Лэйбл"]
-        data["Общий хронометраж"] = song["Время"]
-        data["Длительность звучания"] = song["Время"]
+        data["Общий хронометраж"] = song["Общий хронометраж"]
+        data["Длительность звучания"] = song["Общий хронометраж"]
 
         EventBus.publish(
             Event(event_type=EventType.VIEW.TABLE.PANEL.ADD_CARD),
